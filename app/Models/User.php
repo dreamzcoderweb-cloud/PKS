@@ -24,6 +24,9 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'mobile_number',
+        'branch_id',
+        'status',
     ];
 
     /**
@@ -63,5 +66,13 @@ class User extends Authenticatable
     public function customers()
     {
         return $this->hasMany(Customer::class, 'added_by');
+    }
+
+    /**
+     * Get the branch associated with the user.
+     */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class, 'branch_id', 'branch_id');
     }
 }

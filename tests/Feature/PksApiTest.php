@@ -17,10 +17,18 @@ class PksApiTest extends TestCase
      */
     public function test_admin_can_register()
     {
+        $branch = \App\Models\Branch::create([
+            'name' => 'Main Branch',
+            'price' => 150.00,
+            'status' => 1
+        ]);
+
         $response = $this->postJson('/api/admin/register', [
             'name' => 'Admin User',
             'email' => 'admin@pks.com',
+            'mobile_number' => '1234567890',
             'password' => 'secret123',
+            'branch_id' => $branch->branch_id,
         ]);
 
         $response->assertStatus(201)
@@ -31,40 +39,15 @@ class PksApiTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'message',
-                'data' => ['id', 'name', 'email', 'role']
+                'data' => ['id', 'name', 'email', 'role', 'mobile_number', 'branch_id', 'status']
             ]);
 
         $this->assertDatabaseHas('users', [
             'email' => 'admin@pks.com',
             'role' => 'admin',
-        ]);
-    }
-
-    /**
-     * Test user registration.
-     */
-    public function test_user_can_register()
-    {
-        $response = $this->postJson('/api/user/register', [
-            'name' => 'Standard User',
-            'email' => 'user@pks.com',
-            'password' => 'secret123',
-        ]);
-
-        $response->assertStatus(201)
-            ->assertJson([
-                'success' => true,
-                'message' => 'User registered successfully.',
-            ])
-            ->assertJsonStructure([
-                'success',
-                'message',
-                'data' => ['id', 'name', 'email', 'role']
-            ]);
-
-        $this->assertDatabaseHas('users', [
-            'email' => 'user@pks.com',
-            'role' => 'user',
+            'mobile_number' => '1234567890',
+            'branch_id' => $branch->branch_id,
+            'status' => 1,
         ]);
     }
 
@@ -402,5 +385,159 @@ class PksApiTest extends TestCase
         ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseAdmin2->assertStatus(201);
         $this->assertEquals('CUSTOMER_A002', $responseAdmin2->json('data.customer_code'));
+    }
+
+    /**
+     * Test branch CRUD operations for both Admin and User applications.
+     */
+    public function test_branch_crud_operations()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // --- Admin App CRUD ---
+
+        // 1. Create Branch (Admin)
+        $responseCreate = $this->postJson('/api/admin/branches', [
+            'name' => 'Admin Branch',
+            'price' => 250.00
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseCreate->assertStatus(201)
+            ->assertJsonPath('data.name', 'Admin Branch')
+            ->assertJsonPath('data.price', '250.00')
+            ->assertJsonPath('data.status', 1);
+
+        $branchId = $responseCreate->json('data.branch_id');
+
+        $this->app['auth']->forgetGuards();
+
+        // 2. Read Branches (Admin)
+        $responseIndex = $this->getJson('/api/admin/branches', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseIndex->assertStatus(200);
+        $this->assertCount(1, $responseIndex->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // 3. Show Details (Admin)
+        $responseShow = $this->getJson('/api/admin/branches/' . $branchId, ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseShow->assertStatus(200)
+            ->assertJsonPath('data.name', 'Admin Branch');
+
+        $this->app['auth']->forgetGuards();
+
+        // 4. Update Branch (Admin)
+        $responseUpdate = $this->putJson('/api/admin/branches/' . $branchId, [
+            'name' => 'Admin Branch Updated',
+            'price' => 300.50,
+            'status' => 0
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseUpdate->assertStatus(200)
+            ->assertJsonPath('data.name', 'Admin Branch Updated')
+            ->assertJsonPath('data.price', '300.50')
+            ->assertJsonPath('data.status', 0);
+
+        $this->app['auth']->forgetGuards();
+
+        // --- User App CRUD ---
+
+        // 1. Create Branch (User)
+        $responseUserCreate = $this->postJson('/api/user/branches', [
+            'name' => 'User Branch',
+            'price' => 120.00
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseUserCreate->assertStatus(201)
+            ->assertJsonPath('data.name', 'User Branch')
+            ->assertJsonPath('data.price', '120.00')
+            ->assertJsonPath('data.status', 1);
+
+        $userBranchId = $responseUserCreate->json('data.branch_id');
+
+        $this->app['auth']->forgetGuards();
+
+        // 2. Read Branches (User)
+        $responseUserIndex = $this->getJson('/api/user/branches', ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseUserIndex->assertStatus(200);
+        $this->assertCount(2, $responseUserIndex->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // 3. Update Branch (User)
+        $responseUserUpdate = $this->putJson('/api/user/branches/' . $userBranchId, [
+            'name' => 'User Branch Updated',
+            'price' => 140.00
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseUserUpdate->assertStatus(200)
+            ->assertJsonPath('data.name', 'User Branch Updated')
+            ->assertJsonPath('data.price', '140.00');
+
+        $this->app['auth']->forgetGuards();
+
+        // 4. Delete Branch (User)
+        $responseUserDelete = $this->deleteJson('/api/user/branches/' . $userBranchId, [], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseUserDelete->assertStatus(200);
+
+        $this->app['auth']->forgetGuards();
+
+        // 5. Delete Branch (Admin)
+        $responseDelete = $this->deleteJson('/api/admin/branches/' . $branchId, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDelete->assertStatus(200);
+
+        $this->assertEquals(0, \App\Models\Branch::count());
+    }
+
+    /**
+     * Test user registered from Admin app with role 'user' can login to the User app.
+     */
+    public function test_user_registration_via_admin_app_can_login_to_user_app()
+    {
+        $branch = \App\Models\Branch::create([
+            'name' => 'Main Branch',
+            'price' => 100.00,
+            'status' => 1
+        ]);
+
+        // Register a user with role 'user' via Admin App register endpoint
+        $responseRegister = $this->postJson('/api/admin/register', [
+            'name' => 'Registered User',
+            'email' => 'reguser@pks.com',
+            'mobile_number' => '9999999999',
+            'password' => 'password123',
+            'branch_id' => $branch->branch_id,
+            'role' => 'user'
+        ]);
+
+        $responseRegister->assertStatus(201)
+            ->assertJsonPath('data.role', 'user');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'reguser@pks.com',
+            'role' => 'user'
+        ]);
+
+        $this->app['auth']->forgetGuards();
+
+        // Login through the User app login endpoint
+        $responseLogin = $this->postJson('/api/user/login', [
+            'email' => 'reguser@pks.com',
+            'password' => 'password123'
+        ]);
+
+        $responseLogin->assertStatus(200)
+            ->assertJsonPath('data.user.role', 'user')
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    'user' => ['id', 'name', 'email', 'role'],
+                    'token'
+                ]
+            ]);
     }
 }

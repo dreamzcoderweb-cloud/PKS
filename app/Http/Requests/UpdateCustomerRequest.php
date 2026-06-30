@@ -24,7 +24,7 @@ class UpdateCustomerRequest extends FormRequest
         return [
             'name' => 'sometimes|required|string|max:255',
             'business' => 'sometimes|required|string|max:255',
-            'mobile' => 'sometimes|required|string|max:20',
+            'mobile' => 'sometimes|required|string|max:20|unique:customers,mobile',
             'location' => 'sometimes|required|string|max:255',
             'address' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',

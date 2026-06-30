@@ -24,7 +24,7 @@ class StoreCustomerRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'business' => 'required|string|max:255',
-            'mobile' => 'required|string|max:20',
+            'mobile' => 'required|string|max:20|unique:customers,mobile',
             'location' => 'required|string|max:255',
             'address' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',

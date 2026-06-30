@@ -3,9 +3,11 @@
 use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminStockController;
 use App\Http\Controllers\Admin\AdminCustomerController;
+use App\Http\Controllers\Admin\AdminBranchController;
 use App\Http\Controllers\User\UserAuthController;
 use App\Http\Controllers\User\UserStockController;
 use App\Http\Controllers\User\UserCustomerController;
+use App\Http\Controllers\User\UserBranchController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,12 +27,12 @@ Route::prefix('admin')->group(function () {
 
         Route::apiResource('stocks', AdminStockController::class);
         Route::apiResource('customers', AdminCustomerController::class);
+        Route::apiResource('branches', AdminBranchController::class);
     });
 });
 
 // User API Routes
 Route::prefix('user')->group(function () {
-    Route::post('register', [UserAuthController::class, 'register']);
     Route::post('login', [UserAuthController::class, 'login']);
 
     Route::middleware(['auth:sanctum', 'role:user'])->group(function () {
@@ -46,5 +48,7 @@ Route::prefix('user')->group(function () {
         Route::get('customers', [UserCustomerController::class, 'index']);
         Route::post('customers', [UserCustomerController::class, 'store']);
         Route::get('customers/{id}', [UserCustomerController::class, 'show']);
+
+        Route::apiResource('branches', UserBranchController::class);
     });
 });

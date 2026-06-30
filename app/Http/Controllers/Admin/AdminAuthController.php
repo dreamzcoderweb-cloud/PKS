@@ -27,8 +27,11 @@ class AdminAuthController extends Controller
      */
     public function register(AdminRegisterRequest $request): JsonResponse
     {
-        $user = $this->authService->register($request->validated(), 'admin');
-        return $this->successResponse('Admin registered successfully.', new UserResource($user), 201);
+        $validated = $request->validated();
+        $role = $validated['role'] ?? 'admin';
+        $user = $this->authService->register($validated, $role);
+        $message = $role === 'user' ? 'User registered successfully.' : 'Admin registered successfully.';
+        return $this->successResponse($message, new UserResource($user), 201);
     }
 
     /**

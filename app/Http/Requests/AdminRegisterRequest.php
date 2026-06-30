@@ -24,7 +24,11 @@ class AdminRegisterRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
+            'mobile_number' => 'required|string|max:20|unique:users',
             'password' => 'required|string|min:8',
+            'branch_id' => 'required',
+            'status' => 'nullable|integer|in:0,1',
+            'role' => 'nullable|string|in:admin,user',
         ];
     }
 }

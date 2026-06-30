@@ -17,18 +17,14 @@ class AuthService
         $this->userRepository = $userRepository;
     }
 
-    /**
-     * Register a new user (admin or user).
-     *
-     * @param array $data
-     * @param string $role
-     * @return User
-     */
     public function register(array $data, string $role): User
     {
         return DB::transaction(function () use ($data, $role) {
             $data['password'] = Hash::make($data['password']);
             $data['role'] = $role;
+            if ($role === 'admin') {
+                $data['status'] = $data['status'] ?? 1;
+            }
             return $this->userRepository->create($data);
         });
     }
