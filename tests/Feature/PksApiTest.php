@@ -1,0 +1,406 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Customer;
+use App\Models\Stock;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class PksApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /**
+     * Test admin registration.
+     */
+    public function test_admin_can_register()
+    {
+        $response = $this->postJson('/api/admin/register', [
+            'name' => 'Admin User',
+            'email' => 'admin@pks.com',
+            'password' => 'secret123',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Admin registered successfully.',
+            ])
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => ['id', 'name', 'email', 'role']
+            ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'admin@pks.com',
+            'role' => 'admin',
+        ]);
+    }
+
+    /**
+     * Test user registration.
+     */
+    public function test_user_can_register()
+    {
+        $response = $this->postJson('/api/user/register', [
+            'name' => 'Standard User',
+            'email' => 'user@pks.com',
+            'password' => 'secret123',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'User registered successfully.',
+            ])
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => ['id', 'name', 'email', 'role']
+            ]);
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'user@pks.com',
+            'role' => 'user',
+        ]);
+    }
+
+    /**
+     * Test login validation and role checks.
+     */
+    public function test_login_authenticates_and_verifies_role()
+    {
+        // Create an admin
+        $admin = User::create([
+            'name' => 'Admin',
+            'email' => 'admin@pks.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin'
+        ]);
+
+        // Attempt logging in as admin through user login endpoint
+        $response = $this->postJson('/api/user/login', [
+            'email' => 'admin@pks.com',
+            'password' => 'password'
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Validation failed.'
+            ]);
+
+        // Attempt logging in as admin through admin login endpoint
+        $response2 = $this->postJson('/api/admin/login', [
+            'email' => 'admin@pks.com',
+            'password' => 'password'
+        ]);
+
+        $response2->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Login successful.'
+            ])
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => [
+                    'user' => ['id', 'name', 'email', 'role'],
+                    'token'
+                ]
+            ]);
+    }
+
+    /**
+     * Test profile retrieval and logout.
+     */
+    public function test_profile_and_logout()
+    {
+        $user = User::create([
+            'name' => 'User',
+            'email' => 'user@pks.com',
+            'password' => bcrypt('password'),
+            'role' => 'user'
+        ]);
+
+        $token = $user->createToken('test_token')->plainTextToken;
+
+        // Get Profile
+        $response = $this->getJson('/api/user/profile', [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Profile details retrieved.'
+            ]);
+
+        // Logout
+        $responseLogout = $this->postJson('/api/user/logout', [], [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $responseLogout->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Logged out successfully.'
+            ]);
+
+        // Forget guards to clear cached auth state in testing context
+        $this->app['auth']->forgetGuards();
+
+        // Try getting profile again (unauthenticated)
+        $responseBlocked = $this->getJson('/api/user/profile', [
+            'Authorization' => 'Bearer ' . $token
+        ]);
+
+        $responseBlocked->assertStatus(401);
+    }
+
+    /**
+     * Test stock operations and authorization.
+     */
+    public function test_stock_operations_and_permissions()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user1 = User::create(['name' => 'User One', 'email' => 'user1@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+        $user2 = User::create(['name' => 'User Two', 'email' => 'user2@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser1 = $user1->createToken('token')->plainTextToken;
+        $tokenUser2 = $user2->createToken('token')->plainTextToken;
+
+        // User 1 creates a stock
+        $responseCreate = $this->postJson('/api/user/stocks', [
+            'brand_name' => 'Brand A',
+            'stock_name' => 'Product X',
+            'lott_number' => 'L-123',
+            'units' => 10,
+            'mt' => 1.5
+        ], ['Authorization' => 'Bearer ' . $tokenUser1]);
+
+        $responseCreate->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Stock created successfully.'
+            ]);
+
+        $stock = Stock::first();
+        $this->assertNotNull($stock->stock_code);
+        $this->assertEquals('STOCK_001', $stock->stock_code);
+
+        $this->app['auth']->forgetGuards();
+
+        // User 1 views own stocks
+        $responseListOwn = $this->getJson('/api/user/stocks', ['Authorization' => 'Bearer ' . $tokenUser1]);
+        $responseListOwn->assertStatus(200);
+        $this->assertCount(1, $responseListOwn->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // User 2 views stocks (should be empty for User 2)
+        $responseListOther = $this->getJson('/api/user/stocks', ['Authorization' => 'Bearer ' . $tokenUser2]);
+        $responseListOther->assertStatus(200);
+        $this->assertCount(0, $responseListOther->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // User 2 tries to view User 1's stock details (should be forbidden/unauthorized)
+        $responseDetailOther = $this->getJson('/api/user/stocks/' . $stock->id, ['Authorization' => 'Bearer ' . $tokenUser2]);
+        $responseDetailOther->assertStatus(403);
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin views all stocks
+        $responseAdminList = $this->getJson('/api/admin/stocks', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseAdminList->assertStatus(200);
+        $this->assertCount(1, $responseAdminList->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin updates User 1's stock
+        $responseUpdate = $this->putJson('/api/admin/stocks/' . $stock->id, [
+            'brand_name' => 'Brand A Updated',
+            'units' => 20
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseUpdate->assertStatus(200)
+            ->assertJsonPath('data.brand_name', 'Brand A Updated')
+            ->assertJsonPath('data.units', 20);
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin deletes the stock
+        $responseDelete = $this->deleteJson('/api/admin/stocks/' . $stock->id, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDelete->assertStatus(200);
+        $this->assertEquals(0, Stock::count());
+    }
+
+    /**
+     * Test customer operations and authorization.
+     */
+    public function test_customer_operations_and_permissions()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user1 = User::create(['name' => 'User One', 'email' => 'user1@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+        $user2 = User::create(['name' => 'User Two', 'email' => 'user2@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser1 = $user1->createToken('token')->plainTextToken;
+        $tokenUser2 = $user2->createToken('token')->plainTextToken;
+
+        // User 1 creates a customer
+        $responseCreate = $this->postJson('/api/user/customers', [
+            'name' => 'John Doe',
+            'business' => 'Acme Corp',
+            'mobile' => '9876543210',
+            'location' => 'New York',
+            'address' => '123 Wall St',
+            'gst_number' => 'GSTIN12345'
+        ], ['Authorization' => 'Bearer ' . $tokenUser1]);
+
+        $responseCreate->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Customer created successfully.'
+            ]);
+
+        $customer = Customer::first();
+        $this->assertNotNull($customer->customer_code);
+        $this->assertEquals('CUSTOMER_001', $customer->customer_code);
+
+        $this->app['auth']->forgetGuards();
+
+        // User 1 views own customers
+        $responseListOwn = $this->getJson('/api/user/customers', ['Authorization' => 'Bearer ' . $tokenUser1]);
+        $responseListOwn->assertStatus(200);
+        $this->assertCount(1, $responseListOwn->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // User 2 views customers (should be empty)
+        $responseListOther = $this->getJson('/api/user/customers', ['Authorization' => 'Bearer ' . $tokenUser2]);
+        $responseListOther->assertStatus(200);
+        $this->assertCount(0, $responseListOther->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // User 2 tries to view User 1's customer details (should be forbidden)
+        $responseDetailOther = $this->getJson('/api/user/customers/' . $customer->id, ['Authorization' => 'Bearer ' . $tokenUser2]);
+        $responseDetailOther->assertStatus(403);
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin views all customers
+        $responseAdminList = $this->getJson('/api/admin/customers', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseAdminList->assertStatus(200);
+        $this->assertCount(1, $responseAdminList->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin updates User 1's customer
+        $responseUpdate = $this->putJson('/api/admin/customers/' . $customer->id, [
+            'name' => 'John Doe Updated',
+            'location' => 'Los Angeles'
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseUpdate->assertStatus(200)
+            ->assertJsonPath('data.name', 'John Doe Updated')
+            ->assertJsonPath('data.location', 'Los Angeles');
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin deletes the customer
+        $responseDelete = $this->deleteJson('/api/admin/customers/' . $customer->id, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDelete->assertStatus(200);
+        $this->assertEquals(0, Customer::count());
+    }
+
+    /**
+     * Test sequential stock code generation.
+     */
+    public function test_sequential_stock_codes()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // User creates first stock
+        $response1 = $this->postJson('/api/user/stocks', [
+            'brand_name' => 'Brand', 'stock_name' => 'Product 1', 'lott_number' => 'L-01', 'units' => 10, 'mt' => 1.0
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $response1->assertStatus(201);
+        $this->assertEquals('STOCK_001', $response1->json('data.stock_code'));
+
+        // User creates second stock
+        $response2 = $this->postJson('/api/user/stocks', [
+            'brand_name' => 'Brand', 'stock_name' => 'Product 2', 'lott_number' => 'L-02', 'units' => 20, 'mt' => 2.0
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $response2->assertStatus(201);
+        $this->assertEquals('STOCK_002', $response2->json('data.stock_code'));
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin creates first stock
+        $responseAdmin1 = $this->postJson('/api/admin/stocks', [
+            'brand_name' => 'Brand', 'stock_name' => 'Product A1', 'lott_number' => 'L-A1', 'units' => 30, 'mt' => 3.0
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseAdmin1->assertStatus(201);
+        $this->assertEquals('STOCK_A001', $responseAdmin1->json('data.stock_code'));
+
+        // Admin creates second stock
+        $responseAdmin2 = $this->postJson('/api/admin/stocks', [
+            'brand_name' => 'Brand', 'stock_name' => 'Product A2', 'lott_number' => 'L-A2', 'units' => 40, 'mt' => 4.0
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseAdmin2->assertStatus(201);
+        $this->assertEquals('STOCK_A002', $responseAdmin2->json('data.stock_code'));
+    }
+
+    /**
+     * Test sequential customer code generation.
+     */
+    public function test_sequential_customer_codes()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // User creates first customer
+        $response1 = $this->postJson('/api/user/customers', [
+            'name' => 'Customer 1', 'business' => 'Biz 1', 'mobile' => '1234567890', 'location' => 'Loc 1'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $response1->assertStatus(201);
+        $this->assertEquals('CUSTOMER_001', $response1->json('data.customer_code'));
+
+        // User creates second customer
+        $response2 = $this->postJson('/api/user/customers', [
+            'name' => 'Customer 2', 'business' => 'Biz 2', 'mobile' => '1234567891', 'location' => 'Loc 2'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $response2->assertStatus(201);
+        $this->assertEquals('CUSTOMER_002', $response2->json('data.customer_code'));
+
+        $this->app['auth']->forgetGuards();
+
+        // Admin creates first customer
+        $responseAdmin1 = $this->postJson('/api/admin/customers', [
+            'name' => 'Customer A1', 'business' => 'Biz A1', 'mobile' => '1234567892', 'location' => 'Loc A1'
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseAdmin1->assertStatus(201);
+        $this->assertEquals('CUSTOMER_A001', $responseAdmin1->json('data.customer_code'));
+
+        // Admin creates second customer
+        $responseAdmin2 = $this->postJson('/api/admin/customers', [
+            'name' => 'Customer A2', 'business' => 'Biz A2', 'mobile' => '1234567893', 'location' => 'Loc A2'
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseAdmin2->assertStatus(201);
+        $this->assertEquals('CUSTOMER_A002', $responseAdmin2->json('data.customer_code'));
+    }
+}

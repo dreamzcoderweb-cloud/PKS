@@ -1,0 +1,165 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Stock;
+use App\Models\User;
+use App\Repositories\Interfaces\StockRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
+class StockService
+{
+    protected $stockRepository;
+
+    public function __construct(StockRepositoryInterface $stockRepository)
+    {
+        $this->stockRepository = $stockRepository;
+    }
+
+    /**
+     * Get stocks filtered by user role.
+     *
+     * @param User $user
+     * @return Collection
+     */
+    public function getStocksForUser(User $user): Collection
+    {
+        if ($user->role === 'admin') {
+            return $this->stockRepository->all();
+        }
+
+        return $this->stockRepository->findForUser($user->id);
+    }
+
+    /**
+     * Get detailed stock info if authorized.
+     *
+     * @param User $user
+     * @param int $id
+     * @return Stock
+     * @throws ModelNotFoundException
+     * @throws AuthorizationException
+     */
+    public function getStockDetails(User $user, int $id): Stock
+    {
+        $stock = $this->stockRepository->findById($id);
+
+        if (!$stock) {
+            throw new ModelNotFoundException("Stock not found.");
+        }
+
+        if ($user->role !== 'admin' && $stock->created_by !== $user->id) {
+            throw new AuthorizationException("You are not authorized to view this stock.");
+        }
+
+        return $stock;
+    }
+
+    /**
+     * Create a new stock item with random unique stock_code and stock_id UUID.
+     *
+     * @param User $user
+     * @param array $data
+     * @return Stock
+     */
+    public function createStock(User $user, array $data): Stock
+    {
+        return DB::transaction(function () use ($user, $data) {
+            $data['created_by'] = $user->id;
+            $data['stock_id'] = (string) Str::uuid();
+            $data['stock_code'] = $this->generateUniqueStockCode($user);
+
+            return $this->stockRepository->create($data);
+        });
+    }
+
+    /**
+     * Update an existing stock item (Admin only).
+     *
+     * @param User $user
+     * @param int $id
+     * @param array $data
+     * @return Stock
+     * @throws AuthorizationException
+     * @throws ModelNotFoundException
+     */
+    public function updateStock(User $user, int $id, array $data): Stock
+    {
+        if ($user->role !== 'admin') {
+            throw new AuthorizationException("Only admins are authorized to edit stocks.");
+        }
+
+        return DB::transaction(function () use ($id, $data) {
+            $stock = $this->stockRepository->findById($id);
+
+            if (!$stock) {
+                throw new ModelNotFoundException("Stock not found.");
+            }
+
+            return $this->stockRepository->update($stock, $data);
+        });
+    }
+
+    /**
+     * Delete a stock item (Admin only).
+     *
+     * @param User $user
+     * @param int $id
+     * @return void
+     * @throws AuthorizationException
+     * @throws ModelNotFoundException
+     */
+    public function deleteStock(User $user, int $id): void
+    {
+        if ($user->role !== 'admin') {
+            throw new AuthorizationException("Only admins are authorized to delete stocks.");
+        }
+
+        DB::transaction(function () use ($id) {
+            $stock = $this->stockRepository->findById($id);
+
+            if (!$stock) {
+                throw new ModelNotFoundException("Stock not found.");
+            }
+
+            $this->stockRepository->delete($stock);
+        });
+    }
+
+    /**
+     * Generate a unique sequential stock code based on user role.
+     *
+     * @param User $user
+     * @return string
+     */
+    protected function generateUniqueStockCode(User $user): string
+    {
+        if ($user->role === 'admin') {
+            $prefix = 'STOCK_A';
+            $lastStock = Stock::where('stock_code', 'like', 'STOCK_A%')
+                ->orderByRaw('LENGTH(stock_code) DESC')
+                ->orderBy('stock_code', 'desc')
+                ->first();
+        } else {
+            $prefix = 'STOCK_';
+            $lastStock = Stock::where('stock_code', 'like', 'STOCK_%')
+                ->where('stock_code', 'not like', 'STOCK_A%')
+                ->orderByRaw('LENGTH(stock_code) DESC')
+                ->orderBy('stock_code', 'desc')
+                ->first();
+        }
+
+        if ($lastStock) {
+            $lastNumber = (int) substr($lastStock->stock_code, strlen($prefix));
+            $nextNumber = $lastNumber + 1;
+        } else {
+            $nextNumber = 1;
+        }
+
+        return $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+    }
+}
