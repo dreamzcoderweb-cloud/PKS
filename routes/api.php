@@ -4,10 +4,12 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminStockController;
 use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminBranchController;
+use App\Http\Controllers\Admin\AdminVehicleController;
 use App\Http\Controllers\User\UserAuthController;
 use App\Http\Controllers\User\UserStockController;
 use App\Http\Controllers\User\UserCustomerController;
 use App\Http\Controllers\User\UserBranchController;
+use App\Http\Controllers\User\UserVehicleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -28,6 +30,7 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('stocks', AdminStockController::class);
         Route::apiResource('customers', AdminCustomerController::class);
         Route::apiResource('branches', AdminBranchController::class);
+        Route::apiResource('vehicles', AdminVehicleController::class);
     });
 });
 
@@ -50,5 +53,6 @@ Route::prefix('user')->group(function () {
         Route::get('customers/{id}', [UserCustomerController::class, 'show']);
 
         Route::apiResource('branches', UserBranchController::class);
+        Route::apiResource('vehicles', UserVehicleController::class);
     });
 });

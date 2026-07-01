@@ -540,4 +540,143 @@ class PksApiTest extends TestCase
                 ]
             ]);
     }
+
+    /**
+     * Test vehicle CRUD operations for user and admin.
+     */
+    public function test_vehicle_crud_operations()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // --- Store Lorry Vehicle ---
+        $responseCreateLorry = $this->postJson('/api/user/vehicles', [
+            'vehicle_type' => 'lorry',
+            'vehicle_number' => 'MH-12-AB-1234',
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseCreateLorry->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Vehicle created successfully.'
+            ])
+            ->assertJsonStructure([
+                'success',
+                'message',
+                'data' => ['vehicle_id', 'vehicle_type', 'vehicle_number', 'driver_number', 'status']
+            ]);
+
+        $this->assertDatabaseHas('vehicles', [
+            'vehicle_type' => 'lorry',
+            'vehicle_number' => 'MH-12-AB-1234',
+            'driver_number' => null,
+            'status' => 1
+        ]);
+
+        $vehicleLorryId = $responseCreateLorry->json('data.vehicle_id');
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Store Local Vehicle ---
+        $responseCreateLocal = $this->postJson('/api/user/vehicles', [
+            'vehicle_type' => 'local',
+            'driver_number' => '9876543210',
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseCreateLocal->assertStatus(201)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Vehicle created successfully.'
+            ]);
+
+        $this->assertDatabaseHas('vehicles', [
+            'vehicle_type' => 'local',
+            'driver_number' => '9876543210',
+            'vehicle_number' => null,
+            'status' => 1
+        ]);
+
+        $vehicleLocalId = $responseCreateLocal->json('data.vehicle_id');
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Validation failure: Lorry missing vehicle_number ---
+        $responseFailLorry = $this->postJson('/api/user/vehicles', [
+            'vehicle_type' => 'lorry',
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseFailLorry->assertStatus(422);
+
+        // --- Validation failure: Local missing driver_number ---
+        $responseFailLocal = $this->postJson('/api/user/vehicles', [
+            'vehicle_type' => 'local',
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseFailLocal->assertStatus(422);
+
+        $this->app['auth']->forgetGuards();
+
+        // --- List Vehicles (User App) ---
+        $responseListUser = $this->getJson('/api/user/vehicles', ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseListUser->assertStatus(200);
+        $this->assertCount(2, $responseListUser->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Show Vehicle ---
+        $responseShowUser = $this->getJson('/api/user/vehicles/' . $vehicleLorryId, ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseShowUser->assertStatus(200)
+            ->assertJsonPath('data.vehicle_number', 'MH-12-AB-1234');
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Update Vehicle (change to local and verify validation and update) ---
+        $responseUpdateUser = $this->putJson('/api/user/vehicles/' . $vehicleLorryId, [
+            'vehicle_type' => 'local',
+            'driver_number' => '9999999999'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseUpdateUser->assertStatus(200)
+            ->assertJsonPath('data.vehicle_type', 'local')
+            ->assertJsonPath('data.driver_number', '9999999999');
+
+        $this->assertDatabaseHas('vehicles', [
+            'vehicle_id' => $vehicleLorryId,
+            'vehicle_type' => 'local',
+            'driver_number' => '9999999999',
+            'vehicle_number' => null
+        ]);
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Update vehicle field without supplying vehicle_type (robustness check) ---
+        $responseUpdatePartial = $this->putJson('/api/user/vehicles/' . $vehicleLocalId, [
+            'status' => 0
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseUpdatePartial->assertStatus(200)
+            ->assertJsonPath('data.status', 0);
+
+        $this->assertDatabaseHas('vehicles', [
+            'vehicle_id' => $vehicleLocalId,
+            'status' => 0
+        ]);
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Admin: List, Update, Delete ---
+        $responseListAdmin = $this->getJson('/api/admin/vehicles', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseListAdmin->assertStatus(200);
+        $this->assertCount(2, $responseListAdmin->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        $responseDeleteAdmin = $this->deleteJson('/api/admin/vehicles/' . $vehicleLorryId, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDeleteAdmin->assertStatus(200);
+
+        $this->assertDatabaseMissing('vehicles', ['vehicle_id' => $vehicleLorryId]);
+    }
 }

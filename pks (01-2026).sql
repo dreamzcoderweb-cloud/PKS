@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 30, 2026 at 08:10 AM
+-- Generation Time: Jul 01, 2026 at 07:53 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,6 +20,28 @@ SET time_zone = "+00:00";
 --
 -- Database: `pks`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `branch`
+--
+
+CREATE TABLE `branch` (
+  `branch_id` bigint(20) UNSIGNED NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `price` decimal(15,2) NOT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `branch`
+--
+
+INSERT INTO `branch` (`branch_id`, `name`, `price`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'madurai', 1000.00, 1, '2026-07-01 04:49:55', '2026-07-01 04:49:55');
 
 -- --------------------------------------------------------
 
@@ -66,13 +88,6 @@ CREATE TABLE `customers` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Dumping data for table `customers`
---
-
-INSERT INTO `customers` (`id`, `customer_id`, `customer_code`, `name`, `business`, `mobile`, `address`, `location`, `gst_number`, `status`, `added_by`, `created_at`, `updated_at`) VALUES
-(6, '9bf14d77-7957-4704-9ddb-9c68f7599a1f', 'CUSTOMER_001', 'ajis', 'food', '9489042085', 'madurai', 'madurai', 'gst_0205555', 0, 15, '2026-06-30 00:38:40', '2026-06-30 00:38:40');
 
 -- --------------------------------------------------------
 
@@ -142,12 +157,14 @@ CREATE TABLE `migrations` (
 --
 
 INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
-(1, '0001_01_01_000000_create_users_table', 1),
-(2, '0001_01_01_000001_create_cache_table', 1),
-(3, '0001_01_01_000002_create_jobs_table', 1),
-(4, '2026_06_30_050028_create_personal_access_tokens_table', 1),
-(5, '2026_06_30_050053_create_stocks_table', 1),
-(6, '2026_06_30_050058_create_customers_table', 1);
+(1, '0001_01_00_000000_create_branch_table', 1),
+(2, '0001_01_01_000000_create_users_table', 1),
+(3, '0001_01_01_000001_create_cache_table', 1),
+(4, '0001_01_01_000002_create_jobs_table', 1),
+(5, '2026_06_30_050028_create_personal_access_tokens_table', 1),
+(6, '2026_06_30_050053_create_stocks_table', 1),
+(7, '2026_06_30_050058_create_customers_table', 1),
+(8, '2026_07_01_040252_create_vehicles_table', 1);
 
 -- --------------------------------------------------------
 
@@ -179,6 +196,14 @@ CREATE TABLE `personal_access_tokens` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `personal_access_tokens`
+--
+
+INSERT INTO `personal_access_tokens` (`id`, `tokenable_type`, `tokenable_id`, `name`, `token`, `abilities`, `last_used_at`, `expires_at`, `created_at`, `updated_at`) VALUES
+(18, 'App\\Models\\User', 19, 'auth_token', 'd7e737386179159a7f55c3d91ff350b5885bd419f48093e5c3d5c3d0ac0e1e29', '[\"*\"]', '2026-06-30 23:22:49', NULL, '2026-06-30 23:20:37', '2026-06-30 23:22:49'),
+(19, 'App\\Models\\User', 20, 'auth_token', 'ea1f9271100699f6cc0964ffef5563f1bf7c7f69c32ef89db4981f8a6d027364', '[\"*\"]', '2026-06-30 23:39:25', NULL, '2026-06-30 23:31:02', '2026-06-30 23:39:25');
 
 -- --------------------------------------------------------
 
@@ -215,13 +240,6 @@ CREATE TABLE `stocks` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
---
--- Dumping data for table `stocks`
---
-
-INSERT INTO `stocks` (`id`, `stock_id`, `brand_name`, `stock_name`, `lott_number`, `units`, `mt`, `stock_code`, `created_by`, `created_at`, `updated_at`) VALUES
-(6, '5223ab86-91be-48d8-87af-15c964a67017', 'UTA', 'tes', '12352', 2, 5.0000, 'STOCK_001', 15, '2026-06-30 00:37:44', '2026-06-30 00:37:44');
-
 -- --------------------------------------------------------
 
 --
@@ -235,6 +253,9 @@ CREATE TABLE `users` (
   `email_verified_at` timestamp NULL DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `role` varchar(255) NOT NULL DEFAULT 'user',
+  `mobile_number` varchar(255) DEFAULT NULL,
+  `branch_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `status` tinyint(4) NOT NULL DEFAULT 1,
   `remember_token` varchar(100) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -244,12 +265,35 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `password`, `role`, `remember_token`, `created_at`, `updated_at`) VALUES
-(15, 'tharik', 'tharik@gmail.com', NULL, '$2y$12$nAy2XvvbFhS1RpAH0rLJl.b51UbIX0nZwcnDJQMLVCIVbkF/z36kC', 'user', NULL, '2026-06-30 00:37:16', '2026-06-30 00:37:16');
+INSERT INTO `users` (`id`, `name`, `email`, `email_verified_at`, `password`, `role`, `mobile_number`, `branch_id`, `status`, `remember_token`, `created_at`, `updated_at`) VALUES
+(19, 'ajis', 'ajis@gmail.com', NULL, '$2y$12$DUOptsJwjFebRyHNjr67Q.AYdn70aJ9UaOXnpm.hCmUr2p9jiEfDy', 'user', '9489042187', 1, 1, NULL, '2026-06-30 23:20:22', '2026-06-30 23:20:22'),
+(20, 'tharikajis', 'tharikajis@gmail.com', NULL, '$2y$12$8RUBFLD7DI0AYA.MURmPguOiihFT6/pOJxhLo7OLNtnKmTM7W2LJ6', 'admin', '9489042085', NULL, 1, NULL, '2026-06-30 23:28:55', '2026-06-30 23:28:55');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `vehicles`
+--
+
+CREATE TABLE `vehicles` (
+  `vehicle_id` bigint(20) UNSIGNED NOT NULL,
+  `vehicle_type` enum('lorry','local') NOT NULL,
+  `vehicle_number` varchar(255) DEFAULT NULL,
+  `driver_number` varchar(255) DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `branch`
+--
+ALTER TABLE `branch`
+  ADD PRIMARY KEY (`branch_id`);
 
 --
 -- Indexes for table `cache`
@@ -335,17 +379,30 @@ ALTER TABLE `stocks`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `users_email_unique` (`email`);
+  ADD UNIQUE KEY `users_email_unique` (`email`),
+  ADD KEY `users_branch_id_foreign` (`branch_id`);
+
+--
+-- Indexes for table `vehicles`
+--
+ALTER TABLE `vehicles`
+  ADD PRIMARY KEY (`vehicle_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
 
 --
+-- AUTO_INCREMENT for table `branch`
+--
+ALTER TABLE `branch`
+  MODIFY `branch_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `customers`
 --
 ALTER TABLE `customers`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `failed_jobs`
@@ -363,25 +420,31 @@ ALTER TABLE `jobs`
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `personal_access_tokens`
 --
 ALTER TABLE `personal_access_tokens`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `stocks`
 --
 ALTER TABLE `stocks`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+
+--
+-- AUTO_INCREMENT for table `vehicles`
+--
+ALTER TABLE `vehicles`
+  MODIFY `vehicle_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables
@@ -398,6 +461,12 @@ ALTER TABLE `customers`
 --
 ALTER TABLE `stocks`
   ADD CONSTRAINT `stocks_created_by_foreign` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `users_branch_id_foreign` FOREIGN KEY (`branch_id`) REFERENCES `branch` (`branch_id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
