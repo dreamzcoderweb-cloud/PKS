@@ -22,11 +22,11 @@ class UpdateStockRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'brand_name' => 'sometimes|required|string|max:255',
-            'stock_name' => 'sometimes|required|string|max:255',
-            'lott_number' => 'sometimes|required|string|max:255',
-            'units' => 'sometimes|required|integer|min:0',
-            'mt' => 'sometimes|required|numeric|min:0',
+            'brand_name' => 'sometimes|nullable|string|max:255',
+            'stock_name' => 'sometimes|nullable|string|max:255',
+            'lott_number' => 'sometimes|nullable|string|max:255',
+            'units' => 'sometimes|nullable|integer|min:0',
+            'mt' => 'sometimes|nullable|numeric|min:0',
         ];
     }
 }

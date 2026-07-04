@@ -28,7 +28,7 @@ class AdminRegisterRequest extends FormRequest
             'password' => 'required|string|min:8',
             'branch_id' => 'required',
             'status' => 'nullable|integer|in:0,1',
-            'role' => 'nullable|string|in:admin,user',
+            'role' => 'required|string|in:admin,user',
         ];
     }
 }

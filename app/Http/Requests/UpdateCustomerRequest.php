@@ -22,10 +22,10 @@ class UpdateCustomerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'sometimes|required|string|max:255',
-            'business' => 'sometimes|required|string|max:255',
-            'mobile' => 'sometimes|required|string|max:20|unique:customers,mobile',
-            'location' => 'sometimes|required|string|max:255',
+            'name' => 'sometimes|nullable|string|max:255',
+            'business' => 'sometimes|nullable|string|max:255',
+            'mobile' => 'sometimes|nullable|string|max:20',
+            'location' => 'sometimes|nullable|string|max:255',
             'address' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',
             'status' => 'nullable|integer|in:0,1',
