@@ -183,6 +183,8 @@ class PksApiTest extends TestCase
         $responseListOwn = $this->getJson('/api/user/stocks', ['Authorization' => 'Bearer ' . $tokenUser1]);
         $responseListOwn->assertStatus(200);
         $this->assertCount(1, $responseListOwn->json('data'));
+        $this->assertNotNull($responseListOwn->json('data.0.user'));
+        $this->assertEquals('User One', $responseListOwn->json('data.0.user.name'));
 
         $this->app['auth']->forgetGuards();
 
@@ -203,6 +205,8 @@ class PksApiTest extends TestCase
         $responseAdminList = $this->getJson('/api/admin/stocks', ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseAdminList->assertStatus(200);
         $this->assertCount(1, $responseAdminList->json('data'));
+        $this->assertNotNull($responseAdminList->json('data.0.user'));
+        $this->assertEquals('User One', $responseAdminList->json('data.0.user.name'));
 
         $this->app['auth']->forgetGuards();
 
@@ -272,6 +276,10 @@ class PksApiTest extends TestCase
         $responseListOwn = $this->getJson('/api/user/customers', ['Authorization' => 'Bearer ' . $tokenUser1]);
         $responseListOwn->assertStatus(200);
         $this->assertCount(1, $responseListOwn->json('data'));
+        $this->assertNotNull($responseListOwn->json('data.0.branch'));
+        $this->assertEquals('Main Branch', $responseListOwn->json('data.0.branch.name'));
+        $this->assertNotNull($responseListOwn->json('data.0.user'));
+        $this->assertEquals('User One', $responseListOwn->json('data.0.user.name'));
 
         $this->app['auth']->forgetGuards();
 
@@ -292,6 +300,10 @@ class PksApiTest extends TestCase
         $responseAdminList = $this->getJson('/api/admin/customers', ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseAdminList->assertStatus(200);
         $this->assertCount(1, $responseAdminList->json('data'));
+        $this->assertNotNull($responseAdminList->json('data.0.branch'));
+        $this->assertEquals('Main Branch', $responseAdminList->json('data.0.branch.name'));
+        $this->assertNotNull($responseAdminList->json('data.0.user'));
+        $this->assertEquals('User One', $responseAdminList->json('data.0.user.name'));
 
         $this->app['auth']->forgetGuards();
 
@@ -570,6 +582,8 @@ class PksApiTest extends TestCase
         $responseIndex = $this->getJson('/api/admin/branch-prices', ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseIndex->assertStatus(200);
         $this->assertCount(2, $responseIndex->json('data'));
+        $this->assertNotNull($responseIndex->json('data.0.branch'));
+        $this->assertEquals('Test Branch', $responseIndex->json('data.0.branch.name'));
 
         $this->app['auth']->forgetGuards();
 
@@ -610,6 +624,8 @@ class PksApiTest extends TestCase
         $responseUserIndex = $this->getJson('/api/user/branch-prices', ['Authorization' => 'Bearer ' . $tokenUser]);
         $responseUserIndex->assertStatus(200);
         $this->assertCount(3, $responseUserIndex->json('data'));
+        $this->assertNotNull($responseUserIndex->json('data.0.branch'));
+        $this->assertEquals('Test Branch', $responseUserIndex->json('data.0.branch.name'));
 
         $this->app['auth']->forgetGuards();
 
@@ -715,8 +731,7 @@ class PksApiTest extends TestCase
 
         $this->assertDatabaseHas('vehicles', [
             'vehicle_type' => 'lorry',
-            'vehicle_number' => 'MH-12-AB-1234',
-            'driver_number' => null,
+            'name' => 'MH-12-AB-1234',
             'status' => 1
         ]);
 
@@ -738,8 +753,7 @@ class PksApiTest extends TestCase
 
         $this->assertDatabaseHas('vehicles', [
             'vehicle_type' => 'local',
-            'driver_number' => '9876543210',
-            'vehicle_number' => null,
+            'name' => '9876543210',
             'status' => 1
         ]);
 
@@ -747,26 +761,29 @@ class PksApiTest extends TestCase
 
         $this->app['auth']->forgetGuards();
 
-        // --- Validation failure: Lorry missing vehicle_number ---
+        // --- Optional fields check: Lorry missing vehicle_number succeeds ---
         $responseFailLorry = $this->postJson('/api/user/vehicles', [
             'vehicle_type' => 'lorry',
         ], ['Authorization' => 'Bearer ' . $tokenUser]);
 
-        $responseFailLorry->assertStatus(422);
+        $responseFailLorry->assertStatus(201);
 
-        // --- Validation failure: Local missing driver_number ---
+        $this->app['auth']->forgetGuards();
+
+        // --- Optional fields check: Local missing driver_number succeeds ---
         $responseFailLocal = $this->postJson('/api/user/vehicles', [
             'vehicle_type' => 'local',
         ], ['Authorization' => 'Bearer ' . $tokenUser]);
 
-        $responseFailLocal->assertStatus(422);
+        $responseFailLocal->assertStatus(201);
 
         $this->app['auth']->forgetGuards();
 
         // --- List Vehicles (User App) ---
         $responseListUser = $this->getJson('/api/user/vehicles', ['Authorization' => 'Bearer ' . $tokenUser]);
         $responseListUser->assertStatus(200);
-        $this->assertCount(2, $responseListUser->json('data'));
+        // Note: 4 vehicles created in total (2 main + 2 optional checks)
+        $this->assertCount(4, $responseListUser->json('data'));
 
         $this->app['auth']->forgetGuards();
 
@@ -790,8 +807,7 @@ class PksApiTest extends TestCase
         $this->assertDatabaseHas('vehicles', [
             'vehicle_id' => $vehicleLorryId,
             'vehicle_type' => 'local',
-            'driver_number' => '9999999999',
-            'vehicle_number' => null
+            'name' => '9999999999'
         ]);
 
         $this->app['auth']->forgetGuards();
@@ -814,7 +830,7 @@ class PksApiTest extends TestCase
         // --- Admin: List, Update, Delete ---
         $responseListAdmin = $this->getJson('/api/admin/vehicles', ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseListAdmin->assertStatus(200);
-        $this->assertCount(2, $responseListAdmin->json('data'));
+        $this->assertCount(4, $responseListAdmin->json('data'));
 
         $this->app['auth']->forgetGuards();
 
@@ -974,5 +990,107 @@ class PksApiTest extends TestCase
         $responseDelete->assertStatus(200);
 
         $this->assertDatabaseMissing('alternate_units', ['alter_unit_id' => $alterUnitId]);
+    }
+
+    /**
+     * Test Transporter CRUD operations for both Admin and User.
+     */
+    public function test_transporter_crud_operations()
+    {
+        $branch = \App\Models\Branch::create([
+            'name' => 'Main Branch',
+            'price' => 150.00,
+            'status' => 1
+        ]);
+
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'mobile_number' => '1234567890', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'mobile_number' => '9876543210', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // --- Store via Admin ---
+        $responseCreateAdmin = $this->postJson('/api/admin/transporters', [
+            'name' => 'Admin Transporter',
+            'branch_id' => $branch->branch_id
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseCreateAdmin->assertStatus(201)
+            ->assertJsonPath('data.name', 'Admin Transporter')
+            ->assertJsonPath('data.branch_id', $branch->branch_id);
+
+        $transporterId1 = $responseCreateAdmin->json('data.transporter_id');
+        $this->assertDatabaseHas('transporters', [
+            'transporter_id' => $transporterId1,
+            'name' => 'Admin Transporter',
+            'branch_id' => $branch->branch_id
+        ]);
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Store via User ---
+        $responseCreateUser = $this->postJson('/api/user/transporters', [
+            'name' => 'User Transporter',
+            'branch_id' => $branch->branch_id
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseCreateUser->assertStatus(201)
+            ->assertJsonPath('data.name', 'User Transporter')
+            ->assertJsonPath('data.branch_id', $branch->branch_id);
+
+        $transporterId2 = $responseCreateUser->json('data.transporter_id');
+        $this->assertDatabaseHas('transporters', [
+            'transporter_id' => $transporterId2,
+            'name' => 'User Transporter',
+            'branch_id' => $branch->branch_id
+        ]);
+
+        $this->app['auth']->forgetGuards();
+
+        // --- List via User ---
+        $responseListUser = $this->getJson('/api/user/transporters', ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseListUser->assertStatus(200);
+        $this->assertCount(2, $responseListUser->json('data'));
+        $this->assertNotNull($responseListUser->json('data.0.branch'));
+        $this->assertEquals('Main Branch', $responseListUser->json('data.0.branch.name'));
+
+        $this->app['auth']->forgetGuards();
+
+        // --- List via Admin ---
+        $responseListAdmin = $this->getJson('/api/admin/transporters', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseListAdmin->assertStatus(200);
+        $this->assertCount(2, $responseListAdmin->json('data'));
+        $this->assertNotNull($responseListAdmin->json('data.0.branch'));
+        $this->assertEquals('Main Branch', $responseListAdmin->json('data.0.branch.name'));
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Show Details ---
+        $responseShow = $this->getJson('/api/user/transporters/' . $transporterId1, ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseShow->assertStatus(200)
+            ->assertJsonPath('data.name', 'Admin Transporter');
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Update via User ---
+        $responseUpdate = $this->putJson('/api/user/transporters/' . $transporterId1, [
+            'name' => 'Admin Transporter Updated'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseUpdate->assertStatus(200)
+            ->assertJsonPath('data.name', 'Admin Transporter Updated');
+
+        $this->assertDatabaseHas('transporters', [
+            'transporter_id' => $transporterId1,
+            'name' => 'Admin Transporter Updated'
+        ]);
+
+        $this->app['auth']->forgetGuards();
+
+        // --- Delete via Admin ---
+        $responseDelete = $this->deleteJson('/api/admin/transporters/' . $transporterId1, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDelete->assertStatus(200);
+
+        $this->assertDatabaseMissing('transporters', ['transporter_id' => $transporterId1]);
     }
 }

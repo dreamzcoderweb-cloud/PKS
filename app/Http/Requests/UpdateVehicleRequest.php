@@ -24,7 +24,7 @@ class UpdateVehicleRequest extends FormRequest
         // Get the vehicle ID from the route parameter (which could be the ID or Model)
         $vehicleParam = $this->route('vehicle');
         $vehicleId = is_numeric($vehicleParam) ? $vehicleParam : ($vehicleParam?->vehicle_id ?? null);
-        
+
         // Find the vehicle to get its current type if not provided in the request
         $vehicle = null;
         if ($vehicleId) {
@@ -42,22 +42,24 @@ class UpdateVehicleRequest extends FormRequest
             'status' => 'sometimes|required|integer|in:0,1'
         ];
 
-        if ($this->has('vehicle_type') || $this->has('vehicle_number')) {
+        if ($this->has('name') || $this->has('vehicle_number') || $this->has('driver_number')) {
+            $rules['name'] = [
+                'nullable',
+                'string',
+                'max:50'
+            ];
             $rules['vehicle_number'] = [
-                Rule::requiredIf($vehicleType === 'lorry'),
+                'nullable',
+                'string',
+                'max:50'
+            ];
+            $rules['driver_number'] = [
                 'nullable',
                 'string',
                 'max:50'
             ];
         }
 
-        if ($this->has('vehicle_type') || $this->has('driver_number')) {
-            $rules['driver_number'] = [
-                Rule::requiredIf($vehicleType === 'local'),
-                'nullable',
-                'digits_between:10,15'
-            ];
-        }
 
         return $rules;
     }

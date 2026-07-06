@@ -16,6 +16,8 @@ use App\Http\Controllers\Admin\AdminBranchPriceController;
 use App\Http\Controllers\User\UserUnitController;
 use App\Http\Controllers\User\UserAlternateUnitController;
 use App\Http\Controllers\User\UserBranchPriceController;
+use App\Http\Controllers\Admin\AdminTransporterController;
+use App\Http\Controllers\User\UserTransporterController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,6 +42,7 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('branches', AdminBranchController::class);
         Route::apiResource('branch-prices', AdminBranchPriceController::class);
         Route::apiResource('vehicles', AdminVehicleController::class);
+        Route::apiResource('transporters', AdminTransporterController::class);
         Route::apiResource('units', AdminUnitController::class);
         Route::apiResource('alternate-units', AdminAlternateUnitController::class);
     });
@@ -66,6 +69,7 @@ Route::prefix('user')->group(function () {
         Route::apiResource('branches', UserBranchController::class);
         Route::apiResource('branch-prices', UserBranchPriceController::class);
         Route::apiResource('vehicles', UserVehicleController::class);
+        Route::apiResource('transporters', UserTransporterController::class);
         Route::apiResource('units', UserUnitController::class);
         Route::apiResource('alternate-units', UserAlternateUnitController::class);
     });

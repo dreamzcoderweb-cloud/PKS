@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class BranchPriceResource extends JsonResource
+class TransporterResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -13,10 +13,10 @@ class BranchPriceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
+            'transporter_id' => $this->transporter_id,
+            'name' => $this->name,
             'branch_id' => $this->branch_id,
             'branch' => new BranchResource($this->whenLoaded('branch')),
-            'price' => number_format((float) $this->price, 2, '.', ''),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

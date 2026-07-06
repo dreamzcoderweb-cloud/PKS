@@ -11,15 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-
-        Schema::create('vehicles', function (Blueprint $table) {
-            $table->id('vehicle_id');
-            $table->enum('vehicle_type', ['lorry', 'local']);
-            $table->string('name')->nullable();
-            $table->boolean('status')->default(1);
+        Schema::create('transporters', function (Blueprint $table) {
+            $table->id('transporter_id');
+            $table->string('name');
+            $table->foreignId('branch_id')->constrained('branches', 'branch_id')->onDelete('cascade');
             $table->timestamps();
         });
-
     }
 
     /**
@@ -27,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('vehicles');
+        Schema::dropIfExists('transporters');
     }
 };

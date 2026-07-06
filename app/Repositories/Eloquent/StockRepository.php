@@ -15,7 +15,7 @@ class StockRepository implements StockRepositoryInterface
      */
     public function all(): Collection
     {
-        return Stock::all();
+        return Stock::with('user')->get();
     }
 
     /**
@@ -26,7 +26,7 @@ class StockRepository implements StockRepositoryInterface
      */
     public function findForUser(int $userId): Collection
     {
-        return Stock::where('created_by', $userId)->get();
+        return Stock::with('user')->where('created_by', $userId)->get();
     }
 
     /**

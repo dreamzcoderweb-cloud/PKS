@@ -15,8 +15,7 @@ class VehicleResource extends JsonResource
         return [
             'vehicle_id' => $this->vehicle_id,
             'vehicle_type' => $this->vehicle_type,
-            'vehicle_number' => $this->vehicle_number,
-            'driver_number' => $this->driver_number,
+            'name' => $this->name,
             'status' => (int) $this->status,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

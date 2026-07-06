@@ -54,14 +54,16 @@ class VehicleService
     public function createVehicle(array $data): Vehicle
     {
         return DB::transaction(function () use ($data) {
-            // Default value for status: 1 (Active)
+
             $data['status'] = $data['status'] ?? 1;
 
-            if ($data['vehicle_type'] === 'lorry') {
-                $data['driver_number'] = null;
-            } elseif ($data['vehicle_type'] === 'local') {
-                $data['vehicle_number'] = null;
+            if (!empty($data['vehicle_number'])) {
+                $data['name'] = $data['vehicle_number'];
+            } elseif (!empty($data['driver_number'])) {
+                $data['name'] = $data['driver_number'];
             }
+
+            unset($data['vehicle_number'], $data['driver_number']);
 
             return $this->vehicleRepository->create($data);
         });
@@ -78,19 +80,20 @@ class VehicleService
     public function updateVehicle(int $id, array $data): Vehicle
     {
         return DB::transaction(function () use ($id, $data) {
+
             $vehicle = $this->vehicleRepository->findById($id);
 
             if (!$vehicle) {
                 throw new ModelNotFoundException("Vehicle not found.");
             }
 
-            $finalType = $data['vehicle_type'] ?? $vehicle->vehicle_type;
-
-            if ($finalType === 'lorry') {
-                $data['driver_number'] = null;
-            } elseif ($finalType === 'local') {
-                $data['vehicle_number'] = null;
+            if (!empty($data['vehicle_number'])) {
+                $data['name'] = $data['vehicle_number'];
+            } elseif (!empty($data['driver_number'])) {
+                $data['name'] = $data['driver_number'];
             }
+
+            unset($data['vehicle_number'], $data['driver_number']);
 
             return $this->vehicleRepository->update($vehicle, $data);
         });

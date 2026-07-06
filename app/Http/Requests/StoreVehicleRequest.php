@@ -25,16 +25,20 @@ class StoreVehicleRequest extends FormRequest
                 'required',
                 Rule::in(['lorry', 'local'])
             ],
+            'name' => [
+                'nullable',
+                'string',
+                'max:50'
+            ],
             'vehicle_number' => [
-                Rule::requiredIf($this->input('vehicle_type') === 'lorry'),
                 'nullable',
                 'string',
                 'max:50'
             ],
             'driver_number' => [
-                Rule::requiredIf($this->input('vehicle_type') === 'local'),
                 'nullable',
-                'digits_between:10,15'
+                'string',
+                'max:50'
             ],
             'status' => 'nullable|integer|in:0,1'
         ];
