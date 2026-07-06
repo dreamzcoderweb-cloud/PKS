@@ -40,7 +40,7 @@ class AdminAuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->validated();
-        $result = $this->authService->login($credentials['email'], $credentials['password'], 'admin');
+        $result = $this->authService->login($credentials['mobile_number'], $credentials['password'], 'admin');
 
         return $this->successResponse('Login successful.', [
             'user' => new UserResource($result['user']),

@@ -20,5 +20,5 @@ interface UserRepositoryInterface
      * @param string $email
      * @return User|null
      */
-    public function findByEmail(string $email): ?User;
+    public function findByMobileNumber(string $mobile_number): ?User;
 }

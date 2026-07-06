@@ -17,7 +17,9 @@ use Illuminate\Support\Facades\Route;
 | API Routes
 |--------------------------------------------------------------------------
 */
-
+Route::get('test',function(){
+    return "Welcome to Api route";
+});
 // Admin API Routes
 Route::prefix('admin')->group(function () {
     Route::post('register', [AdminAuthController::class, 'register']);

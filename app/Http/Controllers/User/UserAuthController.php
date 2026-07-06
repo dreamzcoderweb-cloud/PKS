@@ -37,7 +37,7 @@ class UserAuthController extends Controller
     public function login(LoginRequest $request): JsonResponse
     {
         $credentials = $request->validated();
-        $result = $this->authService->login($credentials['email'], $credentials['password'], 'user');
+        $result = $this->authService->login($credentials['mobile_number'], $credentials['password'], 'user');
 
         return $this->successResponse('Login successful.', [
             'user' => new UserResource($result['user']),

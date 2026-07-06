@@ -19,13 +19,13 @@ class UserRepository implements UserRepositoryInterface
     }
 
     /**
-     * Find a user by email.
+     * Find a user by mobile number.
      *
-     * @param string $email
+     * @param string $mobile_number
      * @return User|null
      */
-    public function findByEmail(string $email): ?User
+    public function findByMobileNumber(string $mobile_number): ?User
     {
-        return User::where('email', $email)->first();
+        return User::where('mobile_number', $mobile_number)->first();
     }
 }

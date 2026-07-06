@@ -38,20 +38,20 @@ class AuthService
      * @return array
      * @throws ValidationException
      */
-    public function login(string $email, string $password, string $role): array
+    public function login(string $mobile_number, string $password, string $role): array
     {
-        $user = $this->userRepository->findByEmail($email);
+        $user = $this->userRepository->findByMobileNumber($mobile_number);
 
         if (!$user || !Hash::check($password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['Invalid credentials.'],
+                'mobile_number' => ['Invalid credentials.'],
             ]);
         }
 
         // Verify that the user has the matching role for this login flow
         if ($user->role !== $role) {
             throw ValidationException::withMessages([
-                'email' => ["Access denied. This account does not have {$role} privileges."],
+                'mobile_number' => ["Access denied. This account does not have {$role} privileges."],
             ]);
         }
 
