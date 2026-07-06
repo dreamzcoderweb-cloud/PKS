@@ -21,14 +21,18 @@ class UpdateCustomerRequest extends FormRequest
      */
     public function rules(): array
     {
+        $customerId = $this->route('customer');
         return [
-            'name' => 'sometimes|nullable|string|max:255',
-            'business' => 'sometimes|nullable|string|max:255',
-            'mobile' => 'sometimes|nullable|string|max:20',
-            'location' => 'sometimes|nullable|string|max:255',
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|string|email|max:255|unique:customers,email,' . $customerId,
+            'mobile_number' => 'sometimes|string|max:20|unique:customers,mobile_number,' . $customerId,
+            'password' => 'sometimes|string|min:6',
+            'branch_id' => 'sometimes|exists:branch,branch_id',
+            'status' => 'nullable|integer|in:0,1',
+            'business' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
             'address' => 'nullable|string',
             'gst_number' => 'nullable|string|max:50',
-            'status' => 'nullable|integer|in:0,1',
         ];
     }
 }

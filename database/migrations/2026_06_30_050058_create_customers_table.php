@@ -16,10 +16,13 @@ return new class extends Migration
             $table->string('customer_id')->unique();
             $table->string('customer_code', 20)->unique();
             $table->string('name');
-            $table->string('business');
-            $table->string('mobile');
+            $table->string('email')->unique();
+            $table->string('mobile_number')->unique();
+            $table->string('password');
+            $table->foreignId('branch_id')->constrained('branch', 'branch_id')->onDelete('cascade');
+            $table->string('business')->nullable();
             $table->text('address')->nullable();
-            $table->string('location');
+            $table->string('location')->nullable();
             $table->string('gst_number')->nullable();
             $table->tinyInteger('status')->default(0);
             $table->foreignId('added_by')->constrained('users')->onDelete('cascade');

@@ -18,8 +18,11 @@ class Customer extends Model
         'customer_id',
         'customer_code',
         'name',
+        'email',
+        'mobile_number',
+        'password',
+        'branch_id',
         'business',
-        'mobile',
         'address',
         'location',
         'gst_number',
@@ -28,10 +31,31 @@ class Customer extends Model
     ];
 
     /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+            'status' => 'integer',
+        ];
+    }
+
+    /**
      * Get the user that added this customer.
      */
     public function user()
     {
         return $this->belongsTo(User::class, 'added_by');
+    }
+
+    /**
+     * Get the branch associated with the customer.
+     */
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class, 'branch_id', 'branch_id');
     }
 }

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
+use Illuminate\Support\Facades\Hash;
+
 class CustomerService
 {
     protected $customerRepository;
@@ -72,6 +74,9 @@ class CustomerService
             $data['added_by'] = $user->id;
             $data['customer_id'] = (string) Str::uuid();
             $data['customer_code'] = $this->generateUniqueCustomerCode($user);
+            if (isset($data['password'])) {
+                $data['password'] = Hash::make($data['password']);
+            }
 
             return $this->customerRepository->create($data);
         });
@@ -98,6 +103,10 @@ class CustomerService
 
             if (!$customer) {
                 throw new ModelNotFoundException("Customer not found.");
+            }
+
+            if (isset($data['password'])) {
+                $data['password'] = Hash::make($data['password']);
             }
 
             return $this->customerRepository->update($customer, $data);

@@ -60,13 +60,14 @@ class PksApiTest extends TestCase
         $admin = User::create([
             'name' => 'Admin',
             'email' => 'admin@pks.com',
+            'mobile_number' => '1234567890',
             'password' => bcrypt('password'),
             'role' => 'admin'
         ]);
 
         // Attempt logging in as admin through user login endpoint
         $response = $this->postJson('/api/user/login', [
-            'email' => 'admin@pks.com',
+            'mobile_number' => '1234567890',
             'password' => 'password'
         ]);
 
@@ -78,7 +79,7 @@ class PksApiTest extends TestCase
 
         // Attempt logging in as admin through admin login endpoint
         $response2 = $this->postJson('/api/admin/login', [
-            'email' => 'admin@pks.com',
+            'mobile_number' => '1234567890',
             'password' => 'password'
         ]);
 
@@ -228,6 +229,12 @@ class PksApiTest extends TestCase
      */
     public function test_customer_operations_and_permissions()
     {
+        $branch = \App\Models\Branch::create([
+            'name' => 'Main Branch',
+            'price' => 150.00,
+            'status' => 1
+        ]);
+
         $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
         $user1 = User::create(['name' => 'User One', 'email' => 'user1@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
         $user2 = User::create(['name' => 'User Two', 'email' => 'user2@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
@@ -239,8 +246,11 @@ class PksApiTest extends TestCase
         // User 1 creates a customer
         $responseCreate = $this->postJson('/api/user/customers', [
             'name' => 'John Doe',
+            'email' => 'customer1@pks.com',
+            'mobile_number' => '9876543210',
+            'password' => 'password123',
+            'branch_id' => $branch->branch_id,
             'business' => 'Acme Corp',
-            'mobile' => '9876543210',
             'location' => 'New York',
             'address' => '123 Wall St',
             'gst_number' => 'GSTIN12345'
@@ -350,6 +360,12 @@ class PksApiTest extends TestCase
      */
     public function test_sequential_customer_codes()
     {
+        $branch = \App\Models\Branch::create([
+            'name' => 'Main Branch',
+            'price' => 150.00,
+            'status' => 1
+        ]);
+
         $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
         $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
 
@@ -358,14 +374,26 @@ class PksApiTest extends TestCase
 
         // User creates first customer
         $response1 = $this->postJson('/api/user/customers', [
-            'name' => 'Customer 1', 'business' => 'Biz 1', 'mobile' => '1234567890', 'location' => 'Loc 1'
+            'name' => 'Customer 1',
+            'email' => 'c1@pks.com',
+            'mobile_number' => '1234567890',
+            'password' => 'password123',
+            'branch_id' => $branch->branch_id,
+            'business' => 'Biz 1',
+            'location' => 'Loc 1'
         ], ['Authorization' => 'Bearer ' . $tokenUser]);
         $response1->assertStatus(201);
         $this->assertEquals('CUSTOMER_001', $response1->json('data.customer_code'));
 
         // User creates second customer
         $response2 = $this->postJson('/api/user/customers', [
-            'name' => 'Customer 2', 'business' => 'Biz 2', 'mobile' => '1234567891', 'location' => 'Loc 2'
+            'name' => 'Customer 2',
+            'email' => 'c2@pks.com',
+            'mobile_number' => '1234567891',
+            'password' => 'password123',
+            'branch_id' => $branch->branch_id,
+            'business' => 'Biz 2',
+            'location' => 'Loc 2'
         ], ['Authorization' => 'Bearer ' . $tokenUser]);
         $response2->assertStatus(201);
         $this->assertEquals('CUSTOMER_002', $response2->json('data.customer_code'));
@@ -374,14 +402,26 @@ class PksApiTest extends TestCase
 
         // Admin creates first customer
         $responseAdmin1 = $this->postJson('/api/admin/customers', [
-            'name' => 'Customer A1', 'business' => 'Biz A1', 'mobile' => '1234567892', 'location' => 'Loc A1'
+            'name' => 'Customer A1',
+            'email' => 'ca1@pks.com',
+            'mobile_number' => '1234567892',
+            'password' => 'password123',
+            'branch_id' => $branch->branch_id,
+            'business' => 'Biz A1',
+            'location' => 'Loc A1'
         ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseAdmin1->assertStatus(201);
         $this->assertEquals('CUSTOMER_A001', $responseAdmin1->json('data.customer_code'));
 
         // Admin creates second customer
         $responseAdmin2 = $this->postJson('/api/admin/customers', [
-            'name' => 'Customer A2', 'business' => 'Biz A2', 'mobile' => '1234567893', 'location' => 'Loc A2'
+            'name' => 'Customer A2',
+            'email' => 'ca2@pks.com',
+            'mobile_number' => '1234567893',
+            'password' => 'password123',
+            'branch_id' => $branch->branch_id,
+            'business' => 'Biz A2',
+            'location' => 'Loc A2'
         ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseAdmin2->assertStatus(201);
         $this->assertEquals('CUSTOMER_A002', $responseAdmin2->json('data.customer_code'));
@@ -525,7 +565,7 @@ class PksApiTest extends TestCase
 
         // Login through the User app login endpoint
         $responseLogin = $this->postJson('/api/user/login', [
-            'email' => 'reguser@pks.com',
+            'mobile_number' => '9999999999',
             'password' => 'password123'
         ]);
 
@@ -678,5 +718,157 @@ class PksApiTest extends TestCase
         $responseDeleteAdmin->assertStatus(200);
 
         $this->assertDatabaseMissing('vehicles', ['vehicle_id' => $vehicleLorryId]);
+    }
+
+    /**
+     * Test Unit CRUD operations for both Admin and User.
+     */
+    public function test_unit_crud_operations()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'mobile_number' => '1234567890', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'mobile_number' => '9876543210', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // Create via Admin
+        $responseCreateAdmin = $this->postJson('/api/admin/units', [
+            'unit' => 'Kilogram'
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseCreateAdmin->assertStatus(201)
+            ->assertJsonPath('data.unit', 'Kilogram');
+
+        $unitId = $responseCreateAdmin->json('data.unit_id');
+        $this->assertDatabaseHas('units', ['unit_id' => $unitId, 'unit' => 'Kilogram']);
+
+        $this->app['auth']->forgetGuards();
+
+        // Create via User
+        $responseCreateUser = $this->postJson('/api/user/units', [
+            'unit' => 'Gram'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseCreateUser->assertStatus(201)
+            ->assertJsonPath('data.unit', 'Gram');
+
+        $unitId2 = $responseCreateUser->json('data.unit_id');
+        $this->assertDatabaseHas('units', ['unit_id' => $unitId2, 'unit' => 'Gram']);
+
+        $this->app['auth']->forgetGuards();
+
+        // List units via User
+        $responseListUser = $this->getJson('/api/user/units', ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseListUser->assertStatus(200);
+        $this->assertCount(2, $responseListUser->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // List units via Admin
+        $responseListAdmin = $this->getJson('/api/admin/units', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseListAdmin->assertStatus(200);
+        $this->assertCount(2, $responseListAdmin->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // Show unit
+        $responseShow = $this->getJson('/api/user/units/' . $unitId, ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseShow->assertStatus(200)
+            ->assertJsonPath('data.unit', 'Kilogram');
+
+        $this->app['auth']->forgetGuards();
+
+        // Update unit
+        $responseUpdate = $this->putJson('/api/user/units/' . $unitId, [
+            'unit' => 'Kg'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseUpdate->assertStatus(200)
+            ->assertJsonPath('data.unit', 'Kg');
+
+        $this->assertDatabaseHas('units', ['unit_id' => $unitId, 'unit' => 'Kg']);
+
+        $this->app['auth']->forgetGuards();
+
+        // Delete unit
+        $responseDelete = $this->deleteJson('/api/admin/units/' . $unitId, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDelete->assertStatus(200);
+
+        $this->assertDatabaseMissing('units', ['unit_id' => $unitId]);
+    }
+
+    /**
+     * Test Alternate Unit CRUD operations for both Admin and User.
+     */
+    public function test_alternate_unit_crud_operations()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'mobile_number' => '1234567890', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'mobile_number' => '9876543210', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // Create via Admin
+        $responseCreateAdmin = $this->postJson('/api/admin/alternate-units', [
+            'alter_unit' => 'Box'
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseCreateAdmin->assertStatus(201)
+            ->assertJsonPath('data.alter_unit', 'Box');
+
+        $alterUnitId = $responseCreateAdmin->json('data.alter_unit_id');
+        $this->assertDatabaseHas('alternate_units', ['alter_unit_id' => $alterUnitId, 'alter_unit' => 'Box']);
+
+        $this->app['auth']->forgetGuards();
+
+        // Create via User
+        $responseCreateUser = $this->postJson('/api/user/alternate-units', [
+            'alter_unit' => 'Packet'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseCreateUser->assertStatus(201)
+            ->assertJsonPath('data.alter_unit', 'Packet');
+
+        $alterUnitId2 = $responseCreateUser->json('data.alter_unit_id');
+        $this->assertDatabaseHas('alternate_units', ['alter_unit_id' => $alterUnitId2, 'alter_unit' => 'Packet']);
+
+        $this->app['auth']->forgetGuards();
+
+        // List via User
+        $responseListUser = $this->getJson('/api/user/alternate-units', ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseListUser->assertStatus(200);
+        $this->assertCount(2, $responseListUser->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // List via Admin
+        $responseListAdmin = $this->getJson('/api/admin/alternate-units', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseListAdmin->assertStatus(200);
+        $this->assertCount(2, $responseListAdmin->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // Show alternate unit
+        $responseShow = $this->getJson('/api/user/alternate-units/' . $alterUnitId, ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseShow->assertStatus(200)
+            ->assertJsonPath('data.alter_unit', 'Box');
+
+        $this->app['auth']->forgetGuards();
+
+        // Update alternate unit
+        $responseUpdate = $this->putJson('/api/user/alternate-units/' . $alterUnitId, [
+            'alter_unit' => 'Carton'
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseUpdate->assertStatus(200)
+            ->assertJsonPath('data.alter_unit', 'Carton');
+
+        $this->assertDatabaseHas('alternate_units', ['alter_unit_id' => $alterUnitId, 'alter_unit' => 'Carton']);
+
+        $this->app['auth']->forgetGuards();
+
+        // Delete alternate unit
+        $responseDelete = $this->deleteJson('/api/admin/alternate-units/' . $alterUnitId, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDelete->assertStatus(200);
+
+        $this->assertDatabaseMissing('alternate_units', ['alter_unit_id' => $alterUnitId]);
     }
 }

@@ -31,6 +31,14 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\Interfaces\VehicleRepositoryInterface::class,
             \App\Repositories\Eloquent\VehicleRepository::class
         );
+        $this->app->bind(
+            \App\Repositories\Interfaces\UnitRepositoryInterface::class,
+            \App\Repositories\Eloquent\UnitRepository::class
+        );
+        $this->app->bind(
+            \App\Repositories\Interfaces\AlternateUnitRepositoryInterface::class,
+            \App\Repositories\Eloquent\AlternateUnitRepository::class
+        );
     }
 
     /**

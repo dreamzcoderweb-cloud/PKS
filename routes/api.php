@@ -10,6 +10,10 @@ use App\Http\Controllers\User\UserStockController;
 use App\Http\Controllers\User\UserCustomerController;
 use App\Http\Controllers\User\UserBranchController;
 use App\Http\Controllers\User\UserVehicleController;
+use App\Http\Controllers\Admin\AdminUnitController;
+use App\Http\Controllers\Admin\AdminAlternateUnitController;
+use App\Http\Controllers\User\UserUnitController;
+use App\Http\Controllers\User\UserAlternateUnitController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,6 +37,8 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('customers', AdminCustomerController::class);
         Route::apiResource('branches', AdminBranchController::class);
         Route::apiResource('vehicles', AdminVehicleController::class);
+        Route::apiResource('units', AdminUnitController::class);
+        Route::apiResource('alternate-units', AdminAlternateUnitController::class);
     });
 });
 
@@ -56,5 +62,7 @@ Route::prefix('user')->group(function () {
 
         Route::apiResource('branches', UserBranchController::class);
         Route::apiResource('vehicles', UserVehicleController::class);
+        Route::apiResource('units', UserUnitController::class);
+        Route::apiResource('alternate-units', UserAlternateUnitController::class);
     });
 });
