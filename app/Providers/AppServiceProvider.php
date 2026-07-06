@@ -39,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\Interfaces\AlternateUnitRepositoryInterface::class,
             \App\Repositories\Eloquent\AlternateUnitRepository::class
         );
+        $this->app->bind(
+            \App\Repositories\Interfaces\BranchPriceRepositoryInterface::class,
+            \App\Repositories\Eloquent\BranchPriceRepository::class
+        );
     }
 
     /**

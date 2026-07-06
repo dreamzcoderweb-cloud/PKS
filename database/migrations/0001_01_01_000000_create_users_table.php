@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('role')->default('user'); // admin or user
             $table->string('mobile_number')->nullable();
-            $table->foreignId('branch_id')->nullable()->constrained('branch', 'branch_id')->onDelete('set null');
+            $table->foreignId('branch_id')->nullable()->constrained('branches', 'branch_id')->onDelete('set null');
             $table->tinyInteger('status')->default(1);
             $table->rememberToken();
             $table->timestamps();

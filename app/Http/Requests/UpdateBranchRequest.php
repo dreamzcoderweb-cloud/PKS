@@ -21,7 +21,7 @@ class UpdateBranchRequest extends FormRequest
     {
         return [
             'name' => 'sometimes|nullable|string|max:255',
-            'price' => 'sometimes|nullable|numeric|min:0',
+           // 'price' => 'sometimes|nullable|numeric|min:0',
             'status' => 'sometimes|nullable|integer|in:0,1',
         ];
     }

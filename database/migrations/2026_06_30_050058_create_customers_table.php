@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('mobile_number')->unique();
             $table->string('password');
-            $table->foreignId('branch_id')->constrained('branch', 'branch_id')->onDelete('cascade');
+            $table->foreignId('branch_id')->constrained('branches', 'branch_id')->onDelete('cascade');
             $table->string('business')->nullable();
             $table->text('address')->nullable();
             $table->string('location')->nullable();

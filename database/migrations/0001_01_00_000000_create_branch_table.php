@@ -11,11 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('branch', function (Blueprint $table) {
+        Schema::create('branches', function (Blueprint $table) {
             $table->id('branch_id');
-            $table->string('name');
-            $table->decimal('price', 15, 2);
+            $table->string('branch_name');
             $table->tinyInteger('status')->default(1);
+            $table->timestamps();
+        });
+
+        Schema::create('branch_prices', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('branch_id')->constrained('branches', 'branch_id')->onDelete('cascade');
+            $table->decimal('price', 15, 2);
             $table->timestamps();
         });
     }
@@ -25,6 +31,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('branch');
+        Schema::dropIfExists('branch_prices');
+        Schema::dropIfExists('branches');
     }
 };

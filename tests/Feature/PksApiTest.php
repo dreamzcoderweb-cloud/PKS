@@ -533,6 +533,110 @@ class PksApiTest extends TestCase
     }
 
     /**
+     * Test branch price CRUD operations for both Admin and User applications.
+     */
+    public function test_branch_price_crud_operations()
+    {
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        // Create a branch to reference
+        $branch = \App\Models\Branch::create([
+            'name' => 'Test Branch',
+            'price' => 100.00,
+            'status' => 1
+        ]);
+
+        // --- Admin App CRUD ---
+
+        // 1. Create Branch Price (Admin)
+        $responseCreate = $this->postJson('/api/admin/branch-prices', [
+            'branch_id' => $branch->branch_id,
+            'price' => 150.75
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseCreate->assertStatus(201)
+            ->assertJsonPath('data.branch_id', $branch->branch_id)
+            ->assertJsonPath('data.price', '150.75');
+
+        $priceId = $responseCreate->json('data.id');
+
+        $this->app['auth']->forgetGuards();
+
+        // 2. Read Branch Prices (Admin)
+        $responseIndex = $this->getJson('/api/admin/branch-prices', ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseIndex->assertStatus(200);
+        $this->assertCount(2, $responseIndex->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // 3. Show Details (Admin)
+        $responseShow = $this->getJson('/api/admin/branch-prices/' . $priceId, ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseShow->assertStatus(200)
+            ->assertJsonPath('data.price', '150.75');
+
+        $this->app['auth']->forgetGuards();
+
+        // 4. Update Branch Price (Admin)
+        $responseUpdate = $this->putJson('/api/admin/branch-prices/' . $priceId, [
+            'price' => 180.50
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $responseUpdate->assertStatus(200)
+            ->assertJsonPath('data.price', '180.50');
+
+        $this->app['auth']->forgetGuards();
+
+        // --- User App CRUD ---
+
+        // 1. Create Branch Price (User)
+        $responseUserCreate = $this->postJson('/api/user/branch-prices', [
+            'branch_id' => $branch->branch_id,
+            'price' => 120.00
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseUserCreate->assertStatus(201)
+            ->assertJsonPath('data.branch_id', $branch->branch_id)
+            ->assertJsonPath('data.price', '120.00');
+
+        $userPriceId = $responseUserCreate->json('data.id');
+
+        $this->app['auth']->forgetGuards();
+
+        // 2. Read Branch Prices (User)
+        $responseUserIndex = $this->getJson('/api/user/branch-prices', ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseUserIndex->assertStatus(200);
+        $this->assertCount(3, $responseUserIndex->json('data'));
+
+        $this->app['auth']->forgetGuards();
+
+        // 3. Update Branch Price (User)
+        $responseUserUpdate = $this->putJson('/api/user/branch-prices/' . $userPriceId, [
+            'price' => 140.00
+        ], ['Authorization' => 'Bearer ' . $tokenUser]);
+
+        $responseUserUpdate->assertStatus(200)
+            ->assertJsonPath('data.price', '140.00');
+
+        $this->app['auth']->forgetGuards();
+
+        // 4. Delete Branch Price (User)
+        $responseUserDelete = $this->deleteJson('/api/user/branch-prices/' . $userPriceId, [], ['Authorization' => 'Bearer ' . $tokenUser]);
+        $responseUserDelete->assertStatus(200);
+
+        $this->app['auth']->forgetGuards();
+
+        // 5. Delete Branch Price (Admin)
+        $responseDelete = $this->deleteJson('/api/admin/branch-prices/' . $priceId, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $responseDelete->assertStatus(200);
+
+        $this->assertEquals(1, \App\Models\BranchPrice::count());
+    }
+
+    /**
      * Test user registered from Admin app with role 'user' can login to the User app.
      */
     public function test_user_registration_via_admin_app_can_login_to_user_app()
