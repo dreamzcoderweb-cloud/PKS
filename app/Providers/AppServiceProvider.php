@@ -51,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\Interfaces\DealerRepositoryInterface::class,
             \App\Repositories\Eloquent\DealerRepository::class
         );
+        $this->app->bind(
+            \App\Repositories\Interfaces\PurchaseRepositoryInterface::class,
+            \App\Repositories\Eloquent\PurchaseRepository::class
+        );
     }
 
     /**
