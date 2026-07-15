@@ -138,28 +138,14 @@ class StockService
      */
     protected function generateUniqueStockCode(User $user): string
     {
-        if ($user->role === 'admin') {
-            $prefix = 'STOCK_A';
-            $lastStock = Stock::where('stock_code', 'like', 'STOCK_A%')
-                ->orderByRaw('LENGTH(stock_code) DESC')
-                ->orderBy('stock_code', 'desc')
-                ->first();
-        } else {
-            $prefix = 'STOCK_';
-            $lastStock = Stock::where('stock_code', 'like', 'STOCK_%')
-                ->where('stock_code', 'not like', 'STOCK_A%')
-                ->orderByRaw('LENGTH(stock_code) DESC')
-                ->orderBy('stock_code', 'desc')
-                ->first();
-        }
+        $lastStock = Stock::orderBy('stock_code', 'desc')->first();
 
         if ($lastStock) {
-            $lastNumber = (int) substr($lastStock->stock_code, strlen($prefix));
-            $nextNumber = $lastNumber + 1;
+            $nextNumber = ((int) $lastStock->stock_code) + 1;
         } else {
             $nextNumber = 1;
         }
 
-        return $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+        return (string) $nextNumber;
     }
 }

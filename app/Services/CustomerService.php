@@ -147,28 +147,14 @@ class CustomerService
      */
     protected function generateUniqueCustomerCode(User $user): string
     {
-        if ($user->role === 'admin') {
-            $prefix = 'CUSTOMER_A';
-            $lastCustomer = Customer::where('customer_code', 'like', 'CUSTOMER_A%')
-                ->orderByRaw('LENGTH(customer_code) DESC')
-                ->orderBy('customer_code', 'desc')
-                ->first();
-        } else {
-            $prefix = 'CUSTOMER_';
-            $lastCustomer = Customer::where('customer_code', 'like', 'CUSTOMER_%')
-                ->where('customer_code', 'not like', 'CUSTOMER_A%')
-                ->orderByRaw('LENGTH(customer_code) DESC')
-                ->orderBy('customer_code', 'desc')
-                ->first();
-        }
+        $lastCustomer = Customer::orderBy('customer_code', 'desc')->first();
 
         if ($lastCustomer) {
-            $lastNumber = (int) substr($lastCustomer->customer_code, strlen($prefix));
-            $nextNumber = $lastNumber + 1;
+            $nextNumber = ((int) $lastCustomer->customer_code) + 1;
         } else {
             $nextNumber = 1;
         }
 
-        return $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+        return (string) $nextNumber;
     }
 }

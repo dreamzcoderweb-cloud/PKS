@@ -22,6 +22,11 @@ class Stock extends Model
         'units',
         'mt',
         'stock_code',
+        'branch_id',
+        'unit_id',
+        'alter_unit_id',
+        'unit_value',
+        'alter_unit_value',
         'created_by',
     ];
 
@@ -31,5 +36,20 @@ class Stock extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class, 'branch_id', 'branch_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id', 'unit_id');
+    }
+
+    public function alternateUnit()
+    {
+        return $this->belongsTo(AlternateUnit::class, 'alter_unit_id', 'alter_unit_id');
     }
 }

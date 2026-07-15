@@ -213,12 +213,16 @@ class PksApiTest extends TestCase
         // Admin updates User 1's stock
         $responseUpdate = $this->putJson('/api/admin/stocks/' . $stock->id, [
             'brand_name' => 'Brand A Updated',
-            'units' => 20
+            'units' => 20,
+            'unit_value' => 5.25,
+            'alter_unit_value' => 8.75
         ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
 
         $responseUpdate->assertStatus(200)
             ->assertJsonPath('data.brand_name', 'Brand A Updated')
-            ->assertJsonPath('data.units', 20);
+            ->assertJsonPath('data.units', 20)
+            ->assertJsonPath('data.unit_value', 5.25)
+            ->assertJsonPath('data.alter_unit_value', 8.75);
 
         $this->app['auth']->forgetGuards();
 
@@ -226,6 +230,97 @@ class PksApiTest extends TestCase
         $responseDelete = $this->deleteJson('/api/admin/stocks/' . $stock->id, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseDelete->assertStatus(200);
         $this->assertEquals(0, Stock::count());
+    }
+
+    public function test_stock_creation_includes_branch_and_unit_fields()
+    {
+        $branch = \App\Models\Branch::create([
+            'branch_name' => 'Main Branch',
+            'status' => 1
+        ]);
+
+        $unit = \App\Models\Unit::create(['unit' => 'Kg']);
+        $altUnit = \App\Models\AlternateUnit::create(['alter_unit' => 'Gram']);
+
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+        $token = $user->createToken('token')->plainTextToken;
+
+        $response = $this->postJson('/api/user/stocks', [
+            'brand_name' => 'Brand B',
+            'stock_name' => 'Product Y',
+            'lott_number' => 'L-456',
+            'units' => 15,
+            'mt' => 2.5,
+            'branch_id' => $branch->branch_id,
+            'unit_id' => $unit->unit_id,
+            'alter_unit_id' => $altUnit->alter_unit_id,
+            'unit_value' => 12.5,
+            'alter_unit_value' => 12500.0,
+        ], ['Authorization' => 'Bearer ' . $token]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.branch_id', $branch->branch_id)
+            ->assertJsonPath('data.unit_id', $unit->unit_id)
+            ->assertJsonPath('data.alter_unit_id', $altUnit->alter_unit_id)
+            ->assertJsonPath('data.unit_value', 12.5)
+            ->assertJsonPath('data.alter_unit_value', 12500.0);
+
+        $this->assertDatabaseHas('stocks', [
+            'stock_name' => 'Product Y',
+            'branch_id' => $branch->branch_id,
+            'unit_id' => $unit->unit_id,
+            'alter_unit_id' => $altUnit->alter_unit_id,
+            'unit_value' => 12.5,
+            'alter_unit_value' => 12500.0,
+        ]);
+    }
+
+    public function test_dealer_crud_operations()
+    {
+        $branch = \App\Models\Branch::create([
+            'branch_name' => 'Main Branch',
+            'status' => 1
+        ]);
+
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
+        $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
+
+        $tokenAdmin = $admin->createToken('token')->plainTextToken;
+        $tokenUser = $user->createToken('token')->plainTextToken;
+
+        $createResponse = $this->postJson('/api/admin/dealers', [
+            'branch_id' => $branch->branch_id,
+            'name' => 'Dealer One',
+            'business_name' => 'Dealer Corp',
+            'contact_number' => '09123456789',
+            'address' => '123 Dealer St',
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $createResponse->assertStatus(201)
+            ->assertJson(['success' => true, 'message' => 'Dealer created successfully.']);
+
+        $dealerId = $createResponse->json('data.id');
+
+        $this->assertDatabaseHas('dealers', [
+            'id' => $dealerId,
+            'name' => 'Dealer One',
+            'business_name' => 'Dealer Corp',
+        ]);
+
+        $showResponse = $this->getJson('/api/admin/dealers/' . $dealerId, ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $showResponse->assertStatus(200)
+            ->assertJsonPath('data.name', 'Dealer One');
+
+        $updateResponse = $this->putJson('/api/admin/dealers/' . $dealerId, [
+            'name' => 'Dealer One Updated',
+        ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+
+        $updateResponse->assertStatus(200)
+            ->assertJsonPath('data.name', 'Dealer One Updated');
+
+        $deleteResponse = $this->deleteJson('/api/admin/dealers/' . $dealerId, [], ['Authorization' => 'Bearer ' . $tokenAdmin]);
+        $deleteResponse->assertStatus(200);
+        $this->assertDatabaseMissing('dealers', ['id' => $dealerId]);
     }
 
     /**
