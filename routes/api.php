@@ -22,6 +22,8 @@ use App\Http\Controllers\Admin\AdminTransporterController;
 use App\Http\Controllers\User\UserTransporterController;
 use App\Http\Controllers\Admin\AdminPurchaseController;
 use App\Http\Controllers\User\UserPurchaseController;
+use App\Http\Controllers\Admin\AdminSaleController;
+use App\Http\Controllers\User\UserSaleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -52,6 +54,8 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('dealers', AdminDealerController::class);
         Route::apiResource('purchases', AdminPurchaseController::class);
         Route::post('purchases/{purchase}', [AdminPurchaseController::class, 'update']);
+        Route::apiResource('sales', AdminSaleController::class);
+        Route::post('sales/{sale}', [AdminSaleController::class, 'update']);
     });
 });
 
@@ -81,5 +85,6 @@ Route::prefix('user')->group(function () {
         Route::apiResource('alternate-units', UserAlternateUnitController::class);
         Route::apiResource('dealers', UserDealerController::class);
         Route::apiResource('purchases', UserPurchaseController::class)->except(['update']);
+        Route::apiResource('sales', UserSaleController::class)->except(['update']);
     });
 });
