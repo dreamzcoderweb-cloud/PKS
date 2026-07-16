@@ -8,14 +8,22 @@ use Illuminate\Database\Eloquent\Collection;
 
 class DealerRepository implements DealerRepositoryInterface
 {
-    public function all(): Collection
+    public function all(bool $activeOnly = false): Collection
     {
-        return Dealer::with(['branch', 'user'])->get();
+        $query = Dealer::with(['branch', 'user']);
+        if ($activeOnly) {
+            $query->active();
+        }
+        return $query->get();
     }
 
-    public function findForUser(int $userId): Collection
+    public function findForUser(int $userId, bool $activeOnly = false): Collection
     {
-        return Dealer::with(['branch', 'user'])->where('created_by', $userId)->get();
+        $query = Dealer::with(['branch', 'user'])->where('created_by', $userId);
+        if ($activeOnly) {
+            $query->active();
+        }
+        return $query->get();
     }
 
     public function findById(int $id): ?Dealer

@@ -17,8 +17,14 @@ class Dealer extends Model
         'business_name',
         'contact_number',
         'address',
+        'status',
         'created_by',
     ];
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 1);
+    }
 
     public function branch()
     {

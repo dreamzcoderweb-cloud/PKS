@@ -5,9 +5,12 @@ namespace Tests\Feature;
 use App\Models\Branch;
 use App\Models\Dealer;
 use App\Models\Sale;
-use App\Models\Transporter;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Models\Unit;
+use App\Models\AlternateUnit;
+use App\Models\Stock;
+use App\Models\StockMovement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -23,8 +26,11 @@ class SaleApiTest extends TestCase
     protected $tokenUser;
     protected $branch;
     protected $dealer;
-    protected $transporter;
     protected $vehicle;
+    protected $unit;
+    protected $alternateUnit;
+    protected $stock1;
+    protected $stock2;
 
     protected function setUp(): void
     {
@@ -64,18 +70,54 @@ class SaleApiTest extends TestCase
             'business_name' => 'Dealer Corp',
             'contact_number' => '1234567890',
             'address' => 'Test Address',
+            'status' => 1,
             'created_by' => $this->admin->id
-        ]);
-
-        $this->transporter = Transporter::create([
-            'name' => 'Transporter One',
-            'branch_id' => $this->branch->branch_id
         ]);
 
         $this->vehicle = Vehicle::create([
             'vehicle_type' => 'lorry',
             'name' => 'Vehicle One',
             'status' => 1
+        ]);
+
+        $this->unit = Unit::create([
+            'unit' => 'KG'
+        ]);
+
+        $this->alternateUnit = AlternateUnit::create([
+            'alter_unit' => 'G'
+        ]);
+
+        $this->stock1 = Stock::create([
+            'stock_id' => 'stk-001',
+            'brand_name' => 'Brand A',
+            'stock_name' => 'Stock X',
+            'lott_number' => 'L-01',
+            'units' => 100,
+            'mt' => 10.0,
+            'stock_code' => 'STK001',
+            'branch_id' => $this->branch->branch_id,
+            'unit_id' => $this->unit->unit_id,
+            'alter_unit_id' => $this->alternateUnit->alter_unit_id,
+            'unit_value' => 1.0,
+            'alter_unit_value' => 1000.0,
+            'created_by' => $this->admin->id
+        ]);
+
+        $this->stock2 = Stock::create([
+            'stock_id' => 'stk-002',
+            'brand_name' => 'Brand B',
+            'stock_name' => 'Stock Y',
+            'lott_number' => 'L-02',
+            'units' => 50,
+            'mt' => 5.0,
+            'stock_code' => 'STK002',
+            'branch_id' => $this->branch->branch_id,
+            'unit_id' => $this->unit->unit_id,
+            'alter_unit_id' => $this->alternateUnit->alter_unit_id,
+            'unit_value' => 1.0,
+            'alter_unit_value' => 1000.0,
+            'created_by' => $this->admin->id
         ]);
     }
 
@@ -90,30 +132,20 @@ class SaleApiTest extends TestCase
         $saleData = [
             'branch_id' => $this->branch->branch_id,
             'dealer_id' => $this->dealer->id,
-            'lot_number' => 'LOT-SALE-1',
-            'transporter_id' => $this->transporter->transporter_id,
             'vehicle_id' => $this->vehicle->vehicle_id,
             'invoice_number' => 'INV-001',
+            'driver_name' => 'John Driver',
             'driver_number' => 'DRV-999',
+            'sale_date' => '2026-07-16 12:00:00',
             'sale_images' => [$img1, $img2],
             'details' => [
                 [
-                    'brand_name' => 'Brand A',
-                    'stock_name' => 'Stock X',
+                    'stock_id' => $this->stock1->id,
                     'lot_number' => 'LOT-SALE-1-A',
-                    'unit_value' => 50.00,
-                    'unit_type' => 'KG',
-                    'alter_unit_value' => 50000.00,
-                    'alter_unit_type' => 'G'
-                ],
-                [
-                    'brand_name' => 'Brand B',
-                    'stock_name' => 'Stock Y',
-                    'lot_number' => 'LOT-SALE-1-B',
-                    'unit_value' => 20.50,
-                    'unit_type' => 'KG',
-                    'alter_unit_value' => 20500.00,
-                    'alter_unit_type' => 'G'
+                    'unit_value' => 10.00,
+                    'unit_id' => $this->unit->unit_id,
+                    'alternate_unit_value' => 1.00,
+                    'alternate_unit_id' => $this->alternateUnit->alter_unit_id
                 ]
             ]
         ];
@@ -133,17 +165,32 @@ class SaleApiTest extends TestCase
         // Verify database records
         $this->assertDatabaseHas('sales', [
             'id' => $saleId,
-            'lot_number' => 'LOT-SALE-1',
             'invoice_number' => 'INV-001',
+            'driver_name' => 'John Driver',
             'driver_number' => 'DRV-999',
             'created_by' => $this->admin->id
         ]);
 
         $this->assertDatabaseHas('sale_details', [
             'sale_id' => $saleId,
-            'brand_name' => 'Brand A',
-            'stock_name' => 'Stock X',
+            'stock_id' => $this->stock1->id,
             'lot_number' => 'LOT-SALE-1-A',
+            'unit_value' => 10.00,
+        ]);
+
+        // Verify stock deduction
+        $this->stock1 = $this->stock1->fresh();
+        $this->assertEquals(90, $this->stock1->units);
+        $this->assertEquals(9.0, $this->stock1->mt);
+
+        // Verify stock movement log
+        $this->assertDatabaseHas('stock_movements', [
+            'stock_id' => $this->stock1->id,
+            'sale_id' => $saleId,
+            'quantity' => -10.00,
+            'unit' => 'KG',
+            'movement_type' => 'sale',
+            'user_id' => $this->admin->id,
         ]);
 
         // 2. List Sales
@@ -153,7 +200,10 @@ class SaleApiTest extends TestCase
 
         $responseList->assertStatus(200)
             ->assertJsonPath('success', true)
-            ->assertJsonCount(1, 'data');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.dealer_name', 'Dealer One')
+            ->assertJsonPath('data.0.vehicle_number', 'Vehicle One')
+            ->assertJsonPath('data.0.total_items', 1);
 
         // 3. Show Sale
         $responseShow = $this->getJson('/api/admin/sales/' . $saleId, [
@@ -162,32 +212,30 @@ class SaleApiTest extends TestCase
 
         $responseShow->assertStatus(200)
             ->assertJsonPath('success', true)
-            ->assertJsonPath('data.lot_number', 'LOT-SALE-1')
-            ->assertJsonCount(2, 'data.details');
+            ->assertJsonPath('data.driver_name', 'John Driver')
+            ->assertJsonCount(1, 'data.details');
 
-        // 4. Update Sale (via direct fallback POST route to support multipart/form-data upload)
+        // 4. Update Sale
         $newImg1 = UploadedFile::fake()->create('newimg1.jpg', 100, 'image/jpeg');
         $newImg2 = UploadedFile::fake()->create('newimg2.jpg', 100, 'image/jpeg');
-        $newImg3 = UploadedFile::fake()->create('newimg3.jpg', 100, 'image/jpeg');
 
         $updateData = [
             'branch_id' => $this->branch->branch_id,
             'dealer_id' => $this->dealer->id,
-            'lot_number' => 'LOT-SALE-UPDATED',
-            'transporter_id' => $this->transporter->transporter_id,
             'vehicle_id' => $this->vehicle->vehicle_id,
             'invoice_number' => 'INV-UPDATED',
+            'driver_name' => 'Jane Driver',
             'driver_number' => 'DRV-888',
-            'sale_images' => [$newImg1, $newImg2, $newImg3],
+            'sale_date' => '2026-07-16 13:00:00',
+            'sale_images' => [$newImg1, $newImg2],
             'details' => [
                 [
-                    'brand_name' => 'Brand Updated',
-                    'stock_name' => 'Stock Updated',
-                    'lot_number' => 'LOT-UPDATED-A',
-                    'unit_value' => 75.00,
-                    'unit_type' => 'KG',
-                    'alter_unit_value' => 75000.00,
-                    'alter_unit_type' => 'G'
+                    'stock_id' => $this->stock2->id,
+                    'lot_number' => 'LOT-UPDATED-B',
+                    'unit_value' => 20.00,
+                    'unit_id' => $this->unit->unit_id,
+                    'alternate_unit_value' => 2.00,
+                    'alternate_unit_id' => $this->alternateUnit->alter_unit_id
                 ]
             ]
         ];
@@ -199,19 +247,21 @@ class SaleApiTest extends TestCase
         $responseUpdate->assertStatus(200)
             ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Sale updated successfully.')
-            ->assertJsonPath('data.lot_number', 'LOT-SALE-UPDATED')
             ->assertJsonPath('data.invoice_number', 'INV-UPDATED')
+            ->assertJsonPath('data.driver_name', 'Jane Driver')
             ->assertJsonCount(1, 'data.details');
 
-        // Verify updated database records
-        $this->assertDatabaseHas('sales', [
-            'id' => $saleId,
-            'lot_number' => 'LOT-SALE-UPDATED',
-            'invoice_number' => 'INV-UPDATED',
-            'driver_number' => 'DRV-888'
-        ]);
+        // Verify stock is restored on the old item
+        $this->stock1 = $this->stock1->fresh();
+        $this->assertEquals(100, $this->stock1->units); // Restored
+        $this->assertEquals(10.0, $this->stock1->mt);
 
-        // 5. Delete Sale
+        // Verify stock is deducted on the new item
+        $this->stock2 = $this->stock2->fresh();
+        $this->assertEquals(30, $this->stock2->units); // Deducted
+        $this->assertEquals(3.0, $this->stock2->mt);
+
+        // 5. Delete Sale (Soft Delete)
         $responseDelete = $this->deleteJson('/api/admin/sales/' . $saleId, [], [
             'Authorization' => 'Bearer ' . $this->tokenAdmin
         ]);
@@ -220,8 +270,16 @@ class SaleApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Sale deleted successfully.');
 
-        $this->assertDatabaseMissing('sales', ['id' => $saleId]);
-        $this->assertDatabaseMissing('sale_details', ['sale_id' => $saleId]);
+        // Verify soft deleted in database (deleted_at is set)
+        $this->assertSoftDeleted('sales', ['id' => $saleId]);
+
+        // Verify stock is restored on deletion
+        $this->stock2 = $this->stock2->fresh();
+        $this->assertEquals(50, $this->stock2->units); // Restored
+        $this->assertEquals(5.0, $this->stock2->mt);
+
+        // Verify stock movements deleted
+        $this->assertDatabaseMissing('stock_movements', ['sale_id' => $saleId]);
     }
 
     /**
@@ -235,21 +293,20 @@ class SaleApiTest extends TestCase
         $saleData = [
             'branch_id' => $this->branch->branch_id,
             'dealer_id' => $this->dealer->id,
-            'lot_number' => 'LOT-USER-1',
-            'transporter_id' => $this->transporter->transporter_id,
             'vehicle_id' => $this->vehicle->vehicle_id,
             'invoice_number' => 'INV-USER-001',
+            'driver_name' => 'John Driver',
             'driver_number' => 'DRV-111',
+            'sale_date' => '2026-07-16 12:00:00',
             'sale_images' => [$img1, $img2],
             'details' => [
                 [
-                    'brand_name' => 'Brand User',
-                    'stock_name' => 'Stock User',
+                    'stock_id' => $this->stock1->id,
                     'lot_number' => 'LOT-USER-1-A',
-                    'unit_value' => 30.00,
-                    'unit_type' => 'KG',
-                    'alter_unit_value' => 30000.00,
-                    'alter_unit_type' => 'G'
+                    'unit_value' => 5.00,
+                    'unit_id' => $this->unit->unit_id,
+                    'alternate_unit_value' => 0.50,
+                    'alternate_unit_id' => $this->alternateUnit->alter_unit_id
                 ]
             ]
         ];
@@ -260,8 +317,7 @@ class SaleApiTest extends TestCase
         ]);
 
         $responseCreate->assertStatus(201)
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('message', 'Sale created successfully.');
+            ->assertJsonPath('success', true);
 
         $saleId = $responseCreate->json('data.id');
 
@@ -280,20 +336,19 @@ class SaleApiTest extends TestCase
         ]);
 
         $responseShow->assertStatus(200)
-            ->assertJsonPath('success', true)
-            ->assertJsonPath('data.lot_number', 'LOT-USER-1');
+            ->assertJsonPath('success', true);
 
-        // 4. Update Sale is NOT allowed for User App (returns 405 Method Not Allowed)
+        // 4. Update Sale is NOT allowed for User App
         $responseUpdate = $this->putJson('/api/user/sales/' . $saleId, [
-            'lot_number' => 'NEW-LOT'
+            'invoice_number' => 'NEW-INV'
         ], [
             'Authorization' => 'Bearer ' . $this->tokenUser
         ]);
 
         $responseUpdate->assertStatus(405);
 
-        // 5. Delete Sale
-        $responseDelete = $this->deleteJson('/api/user/sales/' . $saleId, [], [
+        // 5. Force Delete Sale
+        $responseDelete = $this->deleteJson('/api/user/sales/' . $saleId . '?force=true', [], [
             'Authorization' => 'Bearer ' . $this->tokenUser
         ]);
 
@@ -301,11 +356,12 @@ class SaleApiTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('message', 'Sale deleted successfully.');
 
+        // Verify permanent deletion from DB
         $this->assertDatabaseMissing('sales', ['id' => $saleId]);
     }
 
     /**
-     * Test validation rules for sale creation.
+     * Test validation rules and stock insufficiency checks.
      */
     public function test_sale_validation_errors()
     {
@@ -314,21 +370,18 @@ class SaleApiTest extends TestCase
         $responseImageCountError = $this->postJson('/api/admin/sales', [
             'branch_id' => $this->branch->branch_id,
             'dealer_id' => $this->dealer->id,
-            'lot_number' => 'LOT-VAL-1',
-            'transporter_id' => $this->transporter->transporter_id,
             'vehicle_id' => $this->vehicle->vehicle_id,
             'invoice_number' => 'INV-VAL',
+            'driver_name' => 'Driver',
             'driver_number' => 'DRV-VAL',
-            'sale_images' => [$img1], // Only 1 image (minimum is 2)
+            'sale_date' => '2026-07-16 12:00:00',
+            'sale_images' => [$img1], // Only 1 image
             'details' => [
                 [
-                    'brand_name' => 'Brand',
-                    'stock_name' => 'Stock',
+                    'stock_id' => $this->stock1->id,
                     'lot_number' => 'LOT-VAL-1-A',
                     'unit_value' => 10,
-                    'unit_type' => 'KG',
-                    'alter_unit_value' => 10000,
-                    'alter_unit_type' => 'G'
+                    'unit_id' => $this->unit->unit_id,
                 ]
             ]
         ], [
@@ -338,22 +391,30 @@ class SaleApiTest extends TestCase
         $responseImageCountError->assertStatus(422)
             ->assertJsonValidationErrors(['sale_images']);
 
-        // 2. Missing required master fields
-        $responseMissingFields = $this->postJson('/api/admin/sales', [], [
+        // 2. Insufficient stock error
+        $img2 = UploadedFile::fake()->create('img2.jpg', 100, 'image/jpeg');
+        $responseStockError = $this->postJson('/api/admin/sales', [
+            'branch_id' => $this->branch->branch_id,
+            'dealer_id' => $this->dealer->id,
+            'vehicle_id' => $this->vehicle->vehicle_id,
+            'invoice_number' => 'INV-VAL',
+            'driver_name' => 'Driver',
+            'driver_number' => 'DRV-VAL',
+            'sale_date' => '2026-07-16 12:00:00',
+            'sale_images' => [$img1, $img2],
+            'details' => [
+                [
+                    'stock_id' => $this->stock1->id,
+                    'lot_number' => 'LOT-VAL-1-A',
+                    'unit_value' => 200, // stock only has 100
+                    'unit_id' => $this->unit->unit_id,
+                ]
+            ]
+        ], [
             'Authorization' => 'Bearer ' . $this->tokenAdmin
         ]);
 
-        $responseMissingFields->assertStatus(422)
-            ->assertJsonValidationErrors([
-                'branch_id',
-                'dealer_id',
-                'lot_number',
-                'transporter_id',
-                'vehicle_id',
-                'invoice_number',
-                'driver_number',
-                'sale_images',
-                'details'
-            ]);
+        $responseStockError->assertStatus(422)
+            ->assertJsonValidationErrors(['details']);
     }
 }

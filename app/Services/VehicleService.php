@@ -22,9 +22,9 @@ class VehicleService
      *
      * @return Collection
      */
-    public function getAllVehicles(): Collection
+    public function getAllVehicles(bool $activeOnly = false): Collection
     {
-        return $this->vehicleRepository->all();
+        return $this->vehicleRepository->all($activeOnly);
     }
 
     /**

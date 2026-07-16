@@ -9,6 +9,7 @@ use App\Http\Resources\VehicleResource;
 use App\Services\VehicleService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class UserVehicleController extends Controller
 {
@@ -24,9 +25,10 @@ class UserVehicleController extends Controller
     /**
      * Display a listing of all vehicles.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $vehicles = $this->vehicleService->getAllVehicles();
+        $activeOnly = $request->boolean('active') || $request->boolean('active_only');
+        $vehicles = $this->vehicleService->getAllVehicles($activeOnly);
         return $this->successResponse('Vehicles retrieved successfully.', VehicleResource::collection($vehicles));
     }
 

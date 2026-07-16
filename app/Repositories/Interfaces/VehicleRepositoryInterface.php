@@ -12,7 +12,7 @@ interface VehicleRepositoryInterface
      *
      * @return Collection
      */
-    public function all(): Collection;
+    public function all(bool $activeOnly = false): Collection;
 
     /**
      * Find vehicle by ID.

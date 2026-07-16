@@ -11,17 +11,31 @@ class SaleDetail extends Model
 
     protected $fillable = [
         'sale_id',
-        'brand_name',
-        'stock_name',
+        'stock_id',
         'lot_number',
         'unit_value',
-        'unit_type',
-        'alter_unit_value',
-        'alter_unit_type',
+        'unit_id',
+        'alternate_unit_value',
+        'alternate_unit_id',
     ];
 
     public function sale()
     {
         return $this->belongsTo(Sale::class, 'sale_id', 'id');
+    }
+
+    public function stock()
+    {
+        return $this->belongsTo(Stock::class, 'stock_id', 'id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class, 'unit_id', 'unit_id');
+    }
+
+    public function alternateUnit()
+    {
+        return $this->belongsTo(AlternateUnit::class, 'alternate_unit_id', 'alter_unit_id');
     }
 }

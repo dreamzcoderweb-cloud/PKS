@@ -37,7 +37,7 @@ class BranchRepository implements BranchRepositoryInterface
      */
     public function create(array $data): Branch
     {
-        return Branch::create($data);
+        return Branch::create($data)->fresh();
     }
 
     /**
@@ -50,7 +50,7 @@ class BranchRepository implements BranchRepositoryInterface
     public function update(Branch $branch, array $data): Branch
     {
         $branch->update($data);
-        return $branch;
+        return $branch->fresh();
     }
 
     /**

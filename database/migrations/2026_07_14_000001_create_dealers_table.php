@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('business_name');
             $table->string('contact_number');
             $table->text('address');
+            $table->tinyInteger('status')->default(1);
             $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
             $table->timestamps();
         });

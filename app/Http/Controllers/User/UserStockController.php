@@ -26,7 +26,8 @@ class UserStockController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $stocks = $this->stockService->getStocksForUser($request->user());
+        $brandName = $request->query('brand_name') ?? $request->query('brand');
+        $stocks = $this->stockService->getStocksForUser($request->user(), $brandName);
         return $this->successResponse('Stocks retrieved successfully.', StockResource::collection($stocks));
     }
 

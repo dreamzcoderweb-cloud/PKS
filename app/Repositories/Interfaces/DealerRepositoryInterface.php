@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Collection;
 
 interface DealerRepositoryInterface
 {
-    public function all(): Collection;
-    public function findForUser(int $userId): Collection;
+    public function all(bool $activeOnly = false): Collection;
+    public function findForUser(int $userId, bool $activeOnly = false): Collection;
     public function findById(int $id): ?Dealer;
     public function create(array $data): Dealer;
     public function update(Dealer $dealer, array $data): Dealer;

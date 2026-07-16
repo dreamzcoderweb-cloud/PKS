@@ -12,15 +12,16 @@ interface StockRepositoryInterface
      *
      * @return Collection
      */
-    public function all(): Collection;
+    public function all(?string $brandName = null): Collection;
 
     /**
      * Get stocks owned by a user.
      *
      * @param int $userId
+     * @param string|null $brandName
      * @return Collection
      */
-    public function findForUser(int $userId): Collection;
+    public function findForUser(int $userId, ?string $brandName = null): Collection;
 
     /**
      * Find stock by ID.

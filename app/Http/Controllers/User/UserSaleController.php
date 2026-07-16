@@ -41,7 +41,8 @@ class UserSaleController extends Controller
 
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $this->saleService->deleteSale($request->user(), $id);
+        $force = $request->boolean('force');
+        $this->saleService->deleteSale($request->user(), $id, $force);
         return $this->successResponse('Sale deleted successfully.');
     }
 }

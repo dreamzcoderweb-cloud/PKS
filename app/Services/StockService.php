@@ -27,13 +27,13 @@ class StockService
      * @param User $user
      * @return Collection
      */
-    public function getStocksForUser(User $user): Collection
+    public function getStocksForUser(User $user, ?string $brandName = null): Collection
     {
         if ($user->role === 'admin') {
-            return $this->stockRepository->all();
+            return $this->stockRepository->all($brandName);
         }
 
-        return $this->stockRepository->findForUser($user->id);
+        return $this->stockRepository->findForUser($user->id, $brandName);
     }
 
     /**
@@ -142,23 +142,8 @@ class StockService
 
     protected function generateUniqueStockCode(User $user): string
     {
-        if ($user->role === 'admin') {
-            $prefix = 'STOCK_A';
-            $startPos = 8;
-        } else {
-            $prefix = 'STOCK_';
-            $startPos = 7;
-        }
+        $lastCode = (int) Stock::selectRaw('MAX(CAST(stock_code AS UNSIGNED)) as max_code')->value('max_code');
 
-        $lastNumber = Stock::where('stock_code', 'like', $prefix . '%')
-            ->when($user->role !== 'admin', function ($query) {
-                return $query->where('stock_code', 'not like', 'STOCK_A%');
-            })
-            ->selectRaw("MAX(CAST(SUBSTRING(stock_code, {$startPos}) AS UNSIGNED)) as max_num")
-            ->value('max_num');
-
-        $nextNumber = ($lastNumber ?? 0) + 1;
-
-        return $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
+        return (string) ($lastCode + 1);
     }
 }

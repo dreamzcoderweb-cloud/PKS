@@ -13,13 +13,12 @@ return new class extends Migration
         Schema::create('sale_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sale_id')->constrained('sales')->onDelete('cascade');
-            $table->string('brand_name');
-            $table->string('stock_name');
+            $table->foreignId('stock_id')->constrained('stocks')->onDelete('cascade');
             $table->string('lot_number');
-            $table->decimal('unit_value', 15, 2);
-            $table->string('unit_type');
-            $table->decimal('alter_unit_value', 15, 2);
-            $table->string('alter_unit_type');
+            $table->string('unit_value');
+            $table->foreignId('unit_id')->constrained('units', 'unit_id')->onDelete('cascade');
+            $table->string('alternate_unit_value')->nullable();
+            $table->foreignId('alternate_unit_id')->nullable()->constrained('alternate_units', 'alter_unit_id')->onDelete('set null');
             $table->timestamps();
         });
     }

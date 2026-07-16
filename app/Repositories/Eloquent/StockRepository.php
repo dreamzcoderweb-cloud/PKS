@@ -13,9 +13,13 @@ class StockRepository implements StockRepositoryInterface
      *
      * @return Collection
      */
-    public function all(): Collection
+    public function all(?string $brandName = null): Collection
     {
-        return Stock::with(['user', 'branch', 'unit', 'alternateUnit'])->get();
+        $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit']);
+        if ($brandName !== null) {
+            $query->where('brand_name', $brandName);
+        }
+        return $query->get();
     }
 
     /**
@@ -24,9 +28,13 @@ class StockRepository implements StockRepositoryInterface
      * @param int $userId
      * @return Collection
      */
-    public function findForUser(int $userId): Collection
+    public function findForUser(int $userId, ?string $brandName = null): Collection
     {
-        return Stock::with(['user', 'branch', 'unit', 'alternateUnit'])->where('created_by', $userId)->get();
+        $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit'])->where('created_by', $userId);
+        if ($brandName !== null) {
+            $query->where('brand_name', $brandName);
+        }
+        return $query->get();
     }
 
     /**

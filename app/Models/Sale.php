@@ -4,26 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Sale extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'sale_id',
         'branch_id',
         'dealer_id',
-        'lot_number',
-        'transporter_id',
         'vehicle_id',
         'invoice_number',
+        'driver_name',
         'driver_number',
+        'sale_date',
         'sale_images',
         'created_by',
     ];
 
     protected $casts = [
         'sale_images' => 'array',
+        'sale_date' => 'datetime',
     ];
 
     public function branch()
@@ -34,11 +36,6 @@ class Sale extends Model
     public function dealer()
     {
         return $this->belongsTo(Dealer::class, 'dealer_id', 'id');
-    }
-
-    public function transporter()
-    {
-        return $this->belongsTo(Transporter::class, 'transporter_id', 'transporter_id');
     }
 
     public function vehicle()

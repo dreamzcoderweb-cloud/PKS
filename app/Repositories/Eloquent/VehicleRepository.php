@@ -13,9 +13,13 @@ class VehicleRepository implements VehicleRepositoryInterface
      *
      * @return Collection
      */
-    public function all(): Collection
+    public function all(bool $activeOnly = false): Collection
     {
-        return Vehicle::latest()->get();
+        $query = Vehicle::latest();
+        if ($activeOnly) {
+            $query->active();
+        }
+        return $query->get();
     }
 
     /**

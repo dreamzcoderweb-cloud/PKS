@@ -21,13 +21,13 @@ class DealerService
         $this->dealerRepository = $dealerRepository;
     }
 
-    public function getDealersForUser(User $user): Collection
+    public function getDealersForUser(User $user, bool $activeOnly = false): Collection
     {
         if ($user->role === 'admin') {
-            return $this->dealerRepository->all();
+            return $this->dealerRepository->all($activeOnly);
         }
 
-        return $this->dealerRepository->findForUser($user->id);
+        return $this->dealerRepository->findForUser($user->id, $activeOnly);
     }
 
     public function getDealerDetails(User $user, int $id): Dealer

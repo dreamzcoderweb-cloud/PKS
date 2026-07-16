@@ -15,8 +15,8 @@ return new class extends Migration
             $table->foreignId('branch_id')->after('stock_code')->constrained('branches', 'branch_id')->onDelete('cascade');
             $table->foreignId('unit_id')->after('branch_id')->constrained('units', 'unit_id')->onDelete('cascade');
             $table->foreignId('alter_unit_id')->after('unit_id')->constrained('alternate_units', 'alter_unit_id')->onDelete('cascade');
-            $table->decimal('unit_value', 15, 2)->after('alter_unit_id');
-            $table->decimal('alter_unit_value', 15, 2)->after('unit_value');
+            $table->string('unit_value', 15, 2)->after('alter_unit_id');
+            $table->string('alter_unit_value', 15, 2)->after('unit_value');
         });
     }
 

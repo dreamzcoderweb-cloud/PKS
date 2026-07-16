@@ -24,7 +24,8 @@ class UserDealerController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $dealers = $this->dealerService->getDealersForUser($request->user());
+        $activeOnly = $request->boolean('active') || $request->boolean('active_only');
+        $dealers = $this->dealerService->getDealersForUser($request->user(), $activeOnly);
         return $this->successResponse('Dealers retrieved successfully.', DealerResource::collection($dealers));
     }
 
