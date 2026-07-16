@@ -8,6 +8,7 @@ use App\Repositories\Interfaces\StockRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -68,12 +69,14 @@ class StockService
      */
     public function createStock(User $user, array $data): Stock
     {
-        return DB::transaction(function () use ($user, $data) {
-            $data['created_by'] = $user->id;
-            $data['stock_id'] = (string) Str::uuid();
-            $data['stock_code'] = $this->generateUniqueStockCode($user);
+        return Cache::lock('create_stock_lock', 10)->block(5, function () use ($user, $data) {
+            return DB::transaction(function () use ($user, $data) {
+                $data['created_by'] = $user->id;
+                $data['stock_id'] = (string) Str::uuid();
+                $data['stock_code'] = $this->generateUniqueStockCode($user);
 
-            return $this->stockRepository->create($data);
+                return $this->stockRepository->create($data);
+            });
         });
     }
 
@@ -136,16 +139,26 @@ class StockService
      * @param User $user
      * @return string
      */
+
     protected function generateUniqueStockCode(User $user): string
     {
-        $lastStock = Stock::orderBy('stock_code', 'desc')->first();
-
-        if ($lastStock) {
-            $nextNumber = ((int) $lastStock->stock_code) + 1;
+        if ($user->role === 'admin') {
+            $prefix = 'STOCK_A';
+            $startPos = 8;
         } else {
-            $nextNumber = 1;
+            $prefix = 'STOCK_';
+            $startPos = 7;
         }
 
-        return (string) $nextNumber;
+        $lastNumber = Stock::where('stock_code', 'like', $prefix . '%')
+            ->when($user->role !== 'admin', function ($query) {
+                return $query->where('stock_code', 'not like', 'STOCK_A%');
+            })
+            ->selectRaw("MAX(CAST(SUBSTRING(stock_code, {$startPos}) AS UNSIGNED)) as max_num")
+            ->value('max_num');
+
+        $nextNumber = ($lastNumber ?? 0) + 1;
+
+        return $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
     }
 }

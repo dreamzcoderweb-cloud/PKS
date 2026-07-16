@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Repositories\Interfaces\DealerRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -46,12 +47,14 @@ class DealerService
 
     public function createDealer(User $user, array $data): Dealer
     {
-        return DB::transaction(function () use ($user, $data) {
-            $data['created_by'] = $user->id;
-            $data['dealer_id'] = (string) Str::uuid();
-            $data['dealer_code'] = $this->generateUniqueDealerCode($user);
+        return Cache::lock('create_dealer_lock', 10)->block(5, function () use ($user, $data) {
+            return DB::transaction(function () use ($user, $data) {
+                $data['created_by'] = $user->id;
+                $data['dealer_id'] = (string) Str::uuid();
+                $data['dealer_code'] = $this->generateUniqueDealerCode();
 
-            return $this->dealerRepository->create($data);
+                return $this->dealerRepository->create($data);
+            });
         });
     }
 
@@ -89,16 +92,10 @@ class DealerService
         });
     }
 
-    protected function generateUniqueDealerCode(): string
-{
-    $lastDealer = Dealer::orderBy('dealer_code', 'desc')->first();
+     protected function generateUniqueDealerCode(): string
+    {
+        $lastCode = (int) Dealer::selectRaw('MAX(CAST(dealer_code AS UNSIGNED)) as max_code')->value('max_code');
 
-    if ($lastDealer) {
-        $nextNumber = ((int) $lastDealer->dealer_code) + 1;
-    } else {
-        $nextNumber = 1;
+        return (string) ($lastCode + 1);
     }
-
-    return (string) $nextNumber;
-}
 }

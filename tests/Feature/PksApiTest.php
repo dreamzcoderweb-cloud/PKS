@@ -150,6 +150,13 @@ class PksApiTest extends TestCase
      */
     public function test_stock_operations_and_permissions()
     {
+        $branch = \App\Models\Branch::create([
+            'branch_name' => 'Main Branch',
+            'status' => 1
+        ]);
+        $unit = \App\Models\Unit::create(['unit' => 'Kg']);
+        $altUnit = \App\Models\AlternateUnit::create(['alter_unit' => 'Gram']);
+
         $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
         $user1 = User::create(['name' => 'User One', 'email' => 'user1@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
         $user2 = User::create(['name' => 'User Two', 'email' => 'user2@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
@@ -164,7 +171,12 @@ class PksApiTest extends TestCase
             'stock_name' => 'Product X',
             'lott_number' => 'L-123',
             'units' => 10,
-            'mt' => 1.5
+            'mt' => 1.5,
+            'branch_id' => $branch->branch_id,
+            'unit_id' => $unit->unit_id,
+            'alter_unit_id' => $altUnit->alter_unit_id,
+            'unit_value' => '10',
+            'alter_unit_value' => '10000',
         ], ['Authorization' => 'Bearer ' . $tokenUser1]);
 
         $responseCreate->assertStatus(201)
@@ -214,8 +226,8 @@ class PksApiTest extends TestCase
         $responseUpdate = $this->putJson('/api/admin/stocks/' . $stock->id, [
             'brand_name' => 'Brand A Updated',
             'units' => 20,
-            'unit_value' => 5.25,
-            'alter_unit_value' => 8.75
+            'unit_value' => '5.25',
+            'alter_unit_value' => '8.75'
         ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
 
         $responseUpdate->assertStatus(200)
@@ -254,8 +266,8 @@ class PksApiTest extends TestCase
             'branch_id' => $branch->branch_id,
             'unit_id' => $unit->unit_id,
             'alter_unit_id' => $altUnit->alter_unit_id,
-            'unit_value' => 12.5,
-            'alter_unit_value' => 12500.0,
+            'unit_value' => '12.5',
+            'alter_unit_value' => '12500.0',
         ], ['Authorization' => 'Bearer ' . $token]);
 
         $response->assertStatus(201)
@@ -263,7 +275,7 @@ class PksApiTest extends TestCase
             ->assertJsonPath('data.unit_id', $unit->unit_id)
             ->assertJsonPath('data.alter_unit_id', $altUnit->alter_unit_id)
             ->assertJsonPath('data.unit_value', 12.5)
-            ->assertJsonPath('data.alter_unit_value', 12500.0);
+            ->assertJsonPath('data.alter_unit_value', 12500);
 
         $this->assertDatabaseHas('stocks', [
             'stock_name' => 'Product Y',
@@ -425,6 +437,13 @@ class PksApiTest extends TestCase
      */
     public function test_sequential_stock_codes()
     {
+        $branch = \App\Models\Branch::create([
+            'branch_name' => 'Main Branch',
+            'status' => 1
+        ]);
+        $unit = \App\Models\Unit::create(['unit' => 'Kg']);
+        $altUnit = \App\Models\AlternateUnit::create(['alter_unit' => 'Gram']);
+
         $admin = User::create(['name' => 'Admin', 'email' => 'admin@pks.com', 'password' => bcrypt('password'), 'role' => 'admin']);
         $user = User::create(['name' => 'User', 'email' => 'user@pks.com', 'password' => bcrypt('password'), 'role' => 'user']);
 
@@ -433,14 +452,24 @@ class PksApiTest extends TestCase
 
         // User creates first stock
         $response1 = $this->postJson('/api/user/stocks', [
-            'brand_name' => 'Brand', 'stock_name' => 'Product 1', 'lott_number' => 'L-01', 'units' => 10, 'mt' => 1.0
+            'brand_name' => 'Brand', 'stock_name' => 'Product 1', 'lott_number' => 'L-01', 'units' => 10, 'mt' => 1.0,
+            'branch_id' => $branch->branch_id,
+            'unit_id' => $unit->unit_id,
+            'alter_unit_id' => $altUnit->alter_unit_id,
+            'unit_value' => '10',
+            'alter_unit_value' => '10000',
         ], ['Authorization' => 'Bearer ' . $tokenUser]);
         $response1->assertStatus(201);
         $this->assertEquals('STOCK_001', $response1->json('data.stock_code'));
 
         // User creates second stock
         $response2 = $this->postJson('/api/user/stocks', [
-            'brand_name' => 'Brand', 'stock_name' => 'Product 2', 'lott_number' => 'L-02', 'units' => 20, 'mt' => 2.0
+            'brand_name' => 'Brand', 'stock_name' => 'Product 2', 'lott_number' => 'L-02', 'units' => 20, 'mt' => 2.0,
+            'branch_id' => $branch->branch_id,
+            'unit_id' => $unit->unit_id,
+            'alter_unit_id' => $altUnit->alter_unit_id,
+            'unit_value' => '20',
+            'alter_unit_value' => '20000',
         ], ['Authorization' => 'Bearer ' . $tokenUser]);
         $response2->assertStatus(201);
         $this->assertEquals('STOCK_002', $response2->json('data.stock_code'));
@@ -449,14 +478,24 @@ class PksApiTest extends TestCase
 
         // Admin creates first stock
         $responseAdmin1 = $this->postJson('/api/admin/stocks', [
-            'brand_name' => 'Brand', 'stock_name' => 'Product A1', 'lott_number' => 'L-A1', 'units' => 30, 'mt' => 3.0
+            'brand_name' => 'Brand', 'stock_name' => 'Product A1', 'lott_number' => 'L-A1', 'units' => 30, 'mt' => 3.0,
+            'branch_id' => $branch->branch_id,
+            'unit_id' => $unit->unit_id,
+            'alter_unit_id' => $altUnit->alter_unit_id,
+            'unit_value' => '30',
+            'alter_unit_value' => '30000',
         ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseAdmin1->assertStatus(201);
         $this->assertEquals('STOCK_A001', $responseAdmin1->json('data.stock_code'));
 
         // Admin creates second stock
         $responseAdmin2 = $this->postJson('/api/admin/stocks', [
-            'brand_name' => 'Brand', 'stock_name' => 'Product A2', 'lott_number' => 'L-A2', 'units' => 40, 'mt' => 4.0
+            'brand_name' => 'Brand', 'stock_name' => 'Product A2', 'lott_number' => 'L-A2', 'units' => 40, 'mt' => 4.0,
+            'branch_id' => $branch->branch_id,
+            'unit_id' => $unit->unit_id,
+            'alter_unit_id' => $altUnit->alter_unit_id,
+            'unit_value' => '40',
+            'alter_unit_value' => '40000',
         ], ['Authorization' => 'Bearer ' . $tokenAdmin]);
         $responseAdmin2->assertStatus(201);
         $this->assertEquals('STOCK_A002', $responseAdmin2->json('data.stock_code'));

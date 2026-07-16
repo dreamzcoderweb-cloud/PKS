@@ -8,6 +8,7 @@ use App\Repositories\Interfaces\CustomerRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -70,15 +71,17 @@ class CustomerService
      */
     public function createCustomer(User $user, array $data): Customer
     {
-        return DB::transaction(function () use ($user, $data) {
-            $data['added_by'] = $user->id;
-            $data['customer_id'] = (string) Str::uuid();
-            $data['customer_code'] = $this->generateUniqueCustomerCode($user);
-            if (isset($data['password'])) {
-                $data['password'] = Hash::make($data['password']);
-            }
+        return Cache::lock('create_customer_lock', 10)->block(5, function () use ($user, $data) {
+            return DB::transaction(function () use ($user, $data) {
+                $data['added_by'] = $user->id;
+                $data['customer_id'] = (string) Str::uuid();
+                $data['customer_code'] = $this->generateUniqueCustomerCode($user);
+                if (isset($data['password'])) {
+                    $data['password'] = Hash::make($data['password']);
+                }
 
-            return $this->customerRepository->create($data);
+                return $this->customerRepository->create($data);
+            });
         });
     }
 
@@ -145,16 +148,26 @@ class CustomerService
      * @param User $user
      * @return string
      */
-    protected function generateUniqueCustomerCode(User $user): string
-    {
-        $lastCustomer = Customer::orderBy('customer_code', 'desc')->first();
 
-        if ($lastCustomer) {
-            $nextNumber = ((int) $lastCustomer->customer_code) + 1;
+     protected function generateUniqueCustomerCode(User $user): string
+    {
+        if ($user->role === 'admin') {
+            $prefix = 'CUSTOMER_A';
+            $startPos = 11;
         } else {
-            $nextNumber = 1;
+            $prefix = 'CUSTOMER_';
+            $startPos = 10;
         }
 
-        return (string) $nextNumber;
+        $lastNumber = Customer::where('customer_code', 'like', $prefix . '%')
+            ->when($user->role !== 'admin', function ($query) {
+                return $query->where('customer_code', 'not like', 'CUSTOMER_A%');
+            })
+            ->selectRaw("MAX(CAST(SUBSTRING(customer_code, {$startPos}) AS UNSIGNED)) as max_num")
+            ->value('max_num');
+
+        $nextNumber = ($lastNumber ?? 0) + 1;
+
+        return $prefix . str_pad((string) $nextNumber, 3, '0', STR_PAD_LEFT);
     }
 }
