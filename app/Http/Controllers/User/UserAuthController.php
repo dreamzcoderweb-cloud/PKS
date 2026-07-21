@@ -4,7 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRegisterRequest;
-use App\Http\Requests\LoginRequest;
+use App\Http\Requests\UserLoginRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use App\Traits\ApiResponse;
@@ -34,7 +34,7 @@ class UserAuthController extends Controller
     /**
      * Authenticate User and issue token.
      */
-    public function login(LoginRequest $request): JsonResponse
+    public function login(UserLoginRequest $request): JsonResponse
     {
         $credentials = $request->validated();
         $result = $this->authService->login($credentials, null, 'user');

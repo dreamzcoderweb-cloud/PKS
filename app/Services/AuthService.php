@@ -49,19 +49,22 @@ class AuthService
             $identifier = $identifierOrData;
         }
 
-        // 1. Validate missing Branch ID
-        if (empty($branch_id)) {
-            throw ValidationException::withMessages([
-                'branch_id' => ['Branch ID is required.'],
-            ]);
-        }
+        // Branch ID validation is required ONLY for User App login flow
+        if ($role === 'user') {
+            // 1. Validate missing Branch ID
+            if (empty($branch_id)) {
+                throw ValidationException::withMessages([
+                    'branch_id' => ['Branch ID is required.'],
+                ]);
+            }
 
-        // 2. Validate Branch ID existence in branches table
-        $branchExists = \App\Models\Branch::where('branch_id', $branch_id)->exists();
-        if (!$branchExists) {
-            throw ValidationException::withMessages([
-                'branch_id' => ['The selected Branch ID is invalid.'],
-            ]);
+            // 2. Validate Branch ID existence in branches table
+            $branchExists = \App\Models\Branch::where('branch_id', $branch_id)->exists();
+            if (!$branchExists) {
+                throw ValidationException::withMessages([
+                    'branch_id' => ['The selected Branch ID is invalid.'],
+                ]);
+            }
         }
 
         // 3. Find user by email or mobile number
@@ -82,11 +85,13 @@ class AuthService
             ]);
         }
 
-        // 5. Verify that the user's assigned branch_id matches the submitted branch_id
-        if ((int)$user->branch_id !== (int)$branch_id) {
-            throw ValidationException::withMessages([
-                'branch_id' => ['The specified Branch ID does not match this user account.'],
-            ]);
+        // 5. Verify that the user's assigned branch_id matches the submitted branch_id (only for user role)
+        if ($role === 'user') {
+            if ((int)$user->branch_id !== (int)$branch_id) {
+                throw ValidationException::withMessages([
+                    'branch_id' => ['The specified Branch ID does not match this user account.'],
+                ]);
+            }
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;

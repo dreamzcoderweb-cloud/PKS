@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AdminRegisterRequest;
-use App\Http\Requests\LoginRequest;
+use App\Http\Requests\AdminLoginRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
 use App\Traits\ApiResponse;
@@ -37,7 +37,7 @@ class AdminAuthController extends Controller
     /**
      * Authenticate Admin and issue token.
      */
-    public function login(LoginRequest $request): JsonResponse
+    public function login(AdminLoginRequest $request): JsonResponse
     {
         $credentials = $request->validated();
         $result = $this->authService->login($credentials, null, 'admin');
