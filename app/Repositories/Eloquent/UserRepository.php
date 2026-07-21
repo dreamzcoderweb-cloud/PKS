@@ -28,4 +28,28 @@ class UserRepository implements UserRepositoryInterface
     {
         return User::where('mobile_number', $mobile_number)->first();
     }
+
+    /**
+     * Find a user by email.
+     *
+     * @param string $email
+     * @return User|null
+     */
+    public function findByEmail(string $email): ?User
+    {
+        return User::where('email', $email)->first();
+    }
+
+    /**
+     * Find a user by email or mobile number.
+     *
+     * @param string $identifier
+     * @return User|null
+     */
+    public function findByIdentifier(string $identifier): ?User
+    {
+        return User::where('email', $identifier)
+            ->orWhere('mobile_number', $identifier)
+            ->first();
+    }
 }

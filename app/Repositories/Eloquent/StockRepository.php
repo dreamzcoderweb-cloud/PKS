@@ -13,13 +13,15 @@ class StockRepository implements StockRepositoryInterface
      *
      * @return Collection
      */
-    public function all(?string $brandName = null): Collection
+     public function all(?string $brandName = null): Collection
     {
         $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit']);
+
         if ($brandName !== null) {
             $query->where('brand_name', $brandName);
         }
-        return $query->get();
+
+        return $query->latest()->get(); // Orders by created_at DESC
     }
 
     /**

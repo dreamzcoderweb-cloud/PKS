@@ -32,26 +32,60 @@ class AuthService
     /**
      * Authenticate user/admin and generate Sanctum token.
      *
-     * @param string $email
-     * @param string $password
+     * @param string|array $identifierOrData
+     * @param string|null $password
      * @param string $role
+     * @param int|string|null $branch_id
      * @return array
      * @throws ValidationException
      */
-    public function login(string $mobile_number, string $password, string $role): array
+    public function login(string|array $identifierOrData, ?string $password = null, string $role = 'user', int|string|null $branch_id = null): array
     {
-        $user = $this->userRepository->findByMobileNumber($mobile_number);
+        if (is_array($identifierOrData)) {
+            $identifier = $identifierOrData['email'] ?? $identifierOrData['mobile_number'] ?? null;
+            $password = $identifierOrData['password'] ?? $password;
+            $branch_id = $identifierOrData['branch_id'] ?? $branch_id;
+        } else {
+            $identifier = $identifierOrData;
+        }
 
-        if (!$user || !Hash::check($password, $user->password)) {
+        // 1. Validate missing Branch ID
+        if (empty($branch_id)) {
             throw ValidationException::withMessages([
-                'mobile_number' => ['Invalid credentials.'],
+                'branch_id' => ['Branch ID is required.'],
             ]);
         }
 
-        // Verify that the user has the matching role for this login flow
-        if ($user->role !== $role) {
+        // 2. Validate Branch ID existence in branches table
+        $branchExists = \App\Models\Branch::where('branch_id', $branch_id)->exists();
+        if (!$branchExists) {
             throw ValidationException::withMessages([
-                'mobile_number' => ["Access denied. This account does not have {$role} privileges."],
+                'branch_id' => ['The selected Branch ID is invalid.'],
+            ]);
+        }
+
+        // 3. Find user by email or mobile number
+        $user = $identifier ? $this->userRepository->findByIdentifier($identifier) : null;
+
+        if (!$user || !Hash::check($password, $user->password)) {
+            $key = (is_array($identifierOrData) && isset($identifierOrData['mobile_number']) && !isset($identifierOrData['email'])) ? 'mobile_number' : 'email';
+            throw ValidationException::withMessages([
+                $key => ['Invalid credentials.'],
+            ]);
+        }
+
+        // 4. Verify that the user has the matching role for this login flow
+        if ($user->role !== $role) {
+            $key = (is_array($identifierOrData) && isset($identifierOrData['mobile_number']) && !isset($identifierOrData['email'])) ? 'mobile_number' : 'email';
+            throw ValidationException::withMessages([
+                $key => ["Access denied. This account does not have {$role} privileges."],
+            ]);
+        }
+
+        // 5. Verify that the user's assigned branch_id matches the submitted branch_id
+        if ((int)$user->branch_id !== (int)$branch_id) {
+            throw ValidationException::withMessages([
+                'branch_id' => ['The specified Branch ID does not match this user account.'],
             ]);
         }
 

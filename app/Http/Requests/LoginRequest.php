@@ -22,8 +22,23 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'mobile_number' => 'required|string|min:10|max:15',
+            'email' => 'required_without:mobile_number|nullable|string',
+            'mobile_number' => 'required_without:email|nullable|string',
             'password' => 'required|string',
+            'branch_id' => 'required|integer',
+        ];
+    }
+
+    /**
+     * Custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'branch_id.required' => 'Branch ID is required.',
+            'branch_id.integer' => 'Branch ID must be a valid integer.',
+            'email.required_without' => 'Email or mobile number is required.',
+            'password.required' => 'Password is required.',
         ];
     }
 }
