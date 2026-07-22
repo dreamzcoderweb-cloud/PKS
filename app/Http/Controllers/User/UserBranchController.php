@@ -9,6 +9,7 @@ use App\Http\Resources\BranchResource;
 use App\Services\BranchService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use App\Models\Branch;
 
 class UserBranchController extends Controller
 {
@@ -20,7 +21,19 @@ class UserBranchController extends Controller
     {
         $this->branchService = $branchService;
     }
+    public function branchList()
+    {
+        $branches = Branch::select('branch_id', 'branch_name')
+            ->where('status', 1) // Optional: only active branches
+            ->orderBy('branch_name')
+            ->get();
 
+        return response()->json([
+            'status' => true,
+            'message' => 'Branch list fetched successfully.',
+            'data' => $branches
+        ]);
+    }
     /**
      * Display a listing of all branches.
      */

@@ -67,7 +67,7 @@ Route::prefix('admin')->group(function () {
 // User API Routes
 Route::prefix('user')->group(function () {
     Route::post('login', [UserAuthController::class, 'login']);
-
+    Route::get('branch-list', [UserBranchController::class, 'branchList']);
     Route::middleware(['auth:sanctum', 'role:user'])->group(function () {
         Route::post('logout', [UserAuthController::class, 'logout']);
         Route::get('profile', [UserAuthController::class, 'profile']);
