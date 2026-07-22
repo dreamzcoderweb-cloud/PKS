@@ -56,6 +56,7 @@ class PurchaseService
      */
     public function createPurchase($user, array $data): Purchase
     {
+        $data['branch_id'] = $data['branch_id'] ?? $user->branch_id;
         return DB::transaction(function () use ($user, $data) {
             $storedImages = [];
             if (isset($data['purchase_images'])) {

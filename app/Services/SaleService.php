@@ -61,6 +61,7 @@ class SaleService
      */
     public function createSale($user, array $data): Sale
     {
+        $data['branch_id'] = $data['branch_id'] ?? $user->branch_id;
         $uploadedImages = [];
         try {
             return DB::transaction(function () use ($user, $data, &$uploadedImages) {

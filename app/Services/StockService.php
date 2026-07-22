@@ -69,6 +69,7 @@ class StockService
      */
     public function createStock($user, array $data): Stock
     {
+        $data['branch_id'] = $data['branch_id'] ?? $user->branch_id;
         return Cache::lock('create_stock_lock', 10)->block(5, function () use ($user, $data) {
             return DB::transaction(function () use ($user, $data) {
                 $data['created_by'] = $user->getOwnerId();

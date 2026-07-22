@@ -21,13 +21,15 @@ class StoreStockRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isAdmin = $this->is('api/admin/*') || $this->is('admin/*');
+
         return [
             'brand_name' => 'required|string|max:255',
             'stock_name' => 'required|string|max:255',
             'lott_number' => 'required|string|max:255',
             'units' => 'required|integer|min:0',
             'mt' => 'required|numeric|min:0',
-            'branch_id' => 'required|exists:branches,branch_id',
+            'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'unit_id' => 'required|exists:units,unit_id',
             'alter_unit_id' => 'required|exists:alternate_units,alter_unit_id',
             'unit_value' => 'required|string|min:0',

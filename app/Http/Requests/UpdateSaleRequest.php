@@ -19,8 +19,10 @@ class UpdateSaleRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isAdmin = $this->is('api/admin/*') || $this->is('admin/*');
+
         return [
-            'branch_id' => 'required|exists:branches,branch_id',
+            'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'dealer_id' => 'required|exists:dealers,id',
             'vehicle_id' => 'required|exists:vehicles,vehicle_id',
             'invoice_number' => 'required|string|max:255',

@@ -21,8 +21,10 @@ class UpdateDealerRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isAdmin = $this->is('api/admin/*') || $this->is('admin/*');
+
         return [
-            'branch_id' => 'sometimes|exists:branches,branch_id',
+            'branch_id' => ($isAdmin ? 'required' : 'sometimes|nullable') . '|exists:branches,branch_id',
             'name' => 'sometimes|string|max:255',
             'business_name' => 'sometimes|string|max:255',
             'contact_number' => 'sometimes|string|max:20|exists:dealers,contact_number',

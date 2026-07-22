@@ -21,8 +21,10 @@ class StoreDealerRequest extends FormRequest
      */
     public function rules(): array
     {
+        $isAdmin = $this->is('api/admin/*') || $this->is('admin/*');
+
         return [
-            'branch_id' => 'required|exists:branches,branch_id',
+            'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'name' => 'required|string|max:255',
             'business_name' => 'required|string|max:255',
             'contact_number' => 'required|string|max:20|unique:dealers,contact_number',
