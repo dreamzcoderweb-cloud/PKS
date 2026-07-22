@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UserRegisterRequest;
 use App\Http\Requests\UserLoginRequest;
 use App\Http\Resources\UserResource;
+use App\Http\Resources\CustomerResource;
 use App\Services\AuthService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,13 @@ class UserAuthController extends Controller
         $credentials = $request->validated();
         $result = $this->authService->login($credentials, null, 'user');
 
+        if ($result['user'] instanceof \App\Models\Customer) {
+            return $this->successResponse('Login successful.', [
+                'customer' => new CustomerResource($result['user']),
+                'token' => $result['token']
+            ]);
+        }
+
         return $this->successResponse('Login successful.', [
             'user' => new UserResource($result['user']),
             'token' => $result['token']
@@ -59,6 +67,10 @@ class UserAuthController extends Controller
      */
     public function profile(Request $request): JsonResponse
     {
-        return $this->successResponse('Profile details retrieved.', new UserResource($request->user()));
+        $user = $request->user();
+        if ($user instanceof \App\Models\Customer) {
+            return $this->successResponse('Profile details retrieved.', new CustomerResource($user));
+        }
+        return $this->successResponse('Profile details retrieved.', new UserResource($user));
     }
 }

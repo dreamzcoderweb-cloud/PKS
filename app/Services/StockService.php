@@ -27,13 +27,13 @@ class StockService
      * @param User $user
      * @return Collection
      */
-    public function getStocksForUser(User $user, ?string $brandName = null): Collection
+    public function getStocksForUser($user, ?string $brandName = null): Collection
     {
         if ($user->role === 'admin') {
             return $this->stockRepository->all($brandName);
         }
 
-        return $this->stockRepository->findForUser($user->id, $brandName);
+        return $this->stockRepository->findForUser($user->getOwnerId(), $brandName);
     }
 
     /**
@@ -45,7 +45,7 @@ class StockService
      * @throws ModelNotFoundException
      * @throws AuthorizationException
      */
-    public function getStockDetails(User $user, int $id): Stock
+    public function getStockDetails($user, int $id): Stock
     {
         $stock = $this->stockRepository->findById($id);
 
@@ -53,7 +53,7 @@ class StockService
             throw new ModelNotFoundException("Stock not found.");
         }
 
-        if ($user->role !== 'admin' && $stock->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$stock->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException("You are not authorized to view this stock.");
         }
 
@@ -67,11 +67,11 @@ class StockService
      * @param array $data
      * @return Stock
      */
-    public function createStock(User $user, array $data): Stock
+    public function createStock($user, array $data): Stock
     {
         return Cache::lock('create_stock_lock', 10)->block(5, function () use ($user, $data) {
             return DB::transaction(function () use ($user, $data) {
-                $data['created_by'] = $user->id;
+                $data['created_by'] = $user->getOwnerId();
                 $data['stock_id'] = (string) Str::uuid();
                 $data['stock_code'] = $this->generateUniqueStockCode($user);
 
@@ -90,7 +90,7 @@ class StockService
      * @throws AuthorizationException
      * @throws ModelNotFoundException
      */
-    public function updateStock(User $user, int $id, array $data): Stock
+    public function updateStock($user, int $id, array $data): Stock
     {
         if ($user->role !== 'admin') {
             throw new AuthorizationException("Only admins are authorized to edit stocks.");
@@ -116,7 +116,7 @@ class StockService
      * @throws AuthorizationException
      * @throws ModelNotFoundException
      */
-    public function deleteStock(User $user, int $id): void
+    public function deleteStock($user, int $id): void
     {
         if ($user->role !== 'admin') {
             throw new AuthorizationException("Only admins are authorized to delete stocks.");
@@ -140,7 +140,7 @@ class StockService
      * @return string
      */
 
-    protected function generateUniqueStockCode(User $user): string
+    protected function generateUniqueStockCode($user): string
     {
         $lastCode = (int) Stock::selectRaw('MAX(CAST(stock_code AS UNSIGNED)) as max_code')->value('max_code');
 

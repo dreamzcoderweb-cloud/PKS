@@ -24,19 +24,19 @@ class PurchaseService
     /**
      * Retrieve all purchases depending on user role.
      */
-    public function getPurchasesForUser(User $user): Collection
+    public function getPurchasesForUser($user): Collection
     {
         if ($user->role === 'admin') {
             return $this->purchaseRepository->all();
         }
 
-        return $this->purchaseRepository->findForUser($user->id);
+        return $this->purchaseRepository->findForUser($user->getOwnerId());
     }
 
     /**
      * Retrieve a specific purchase if authorized.
      */
-    public function getPurchaseDetails(User $user, int $id): Purchase
+    public function getPurchaseDetails($user, int $id): Purchase
     {
         $purchase = $this->purchaseRepository->findById($id);
 
@@ -44,7 +44,7 @@ class PurchaseService
             throw new ModelNotFoundException('Purchase not found.');
         }
 
-        if ($user->role !== 'admin' && $purchase->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$purchase->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('You are not authorized to view this purchase.');
         }
 
@@ -54,7 +54,7 @@ class PurchaseService
     /**
      * Create a purchase with its details and images.
      */
-    public function createPurchase(User $user, array $data): Purchase
+    public function createPurchase($user, array $data): Purchase
     {
         return DB::transaction(function () use ($user, $data) {
             $storedImages = [];
@@ -80,7 +80,7 @@ class PurchaseService
                 'vehicle_id' => $data['vehicle_id'],
                 'driver_number' => $data['driver_number'],
                 'purchase_images' => $storedImages,
-                'created_by' => $user->id,
+                'created_by' => $user->getOwnerId(),
             ];
 
             $purchase = $this->purchaseRepository->create($purchaseData);
@@ -96,7 +96,7 @@ class PurchaseService
     /**
      * Update a purchase (Admin only).
      */
-    public function updatePurchase(User $user, int $id, array $data): Purchase
+    public function updatePurchase($user, int $id, array $data): Purchase
     {
         if ($user->role !== 'admin') {
             throw new AuthorizationException('Only admins are authorized to update purchases.');
@@ -161,7 +161,7 @@ class PurchaseService
     /**
      * Delete a purchase.
      */
-    public function deletePurchase(User $user, int $id): void
+    public function deletePurchase($user, int $id): void
     {
         $purchase = $this->purchaseRepository->findById($id);
 
@@ -169,7 +169,7 @@ class PurchaseService
             throw new ModelNotFoundException('Purchase not found.');
         }
 
-        if ($user->role !== 'admin' && $purchase->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$purchase->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('You are not authorized to delete this purchase.');
         }
 

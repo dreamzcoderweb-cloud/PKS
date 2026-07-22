@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 
-class Customer extends Model
+class Customer extends Authenticatable
 {
-    use HasFactory;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -57,5 +59,25 @@ class Customer extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class, 'branch_id', 'branch_id');
+    }
+
+    /**
+     * Get the virtual role attribute.
+     *
+     * @return string
+     */
+    public function getRoleAttribute(): string
+    {
+        return 'user';
+    }
+
+    /**
+     * Get the ID of the user owning/creating records.
+     *
+     * @return int
+     */
+    public function getOwnerId(): int
+    {
+        return (int) $this->added_by;
     }
 }

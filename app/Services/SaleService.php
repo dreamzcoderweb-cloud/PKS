@@ -29,19 +29,19 @@ class SaleService
     /**
      * Retrieve all sales depending on user role.
      */
-    public function getSalesForUser(User $user): Collection
+    public function getSalesForUser($user): Collection
     {
         if ($user->role === 'admin') {
             return $this->saleRepository->all();
         }
 
-        return $this->saleRepository->findForUser($user->id);
+        return $this->saleRepository->findForUser($user->getOwnerId());
     }
 
     /**
      * Retrieve a specific sale if authorized.
      */
-    public function getSaleDetails(User $user, int $id): Sale
+    public function getSaleDetails($user, int $id): Sale
     {
         $sale = $this->saleRepository->findById($id);
 
@@ -49,7 +49,7 @@ class SaleService
             throw new ModelNotFoundException('Sale not found.');
         }
 
-        if ($user->role !== 'admin' && $sale->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$sale->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('You are not authorized to view this sale.');
         }
 
@@ -59,7 +59,7 @@ class SaleService
     /**
      * Create a sale with its details, images, and deduct stock.
      */
-    public function createSale(User $user, array $data): Sale
+    public function createSale($user, array $data): Sale
     {
         $uploadedImages = [];
         try {
@@ -89,7 +89,7 @@ class SaleService
                     'driver_number' => $data['driver_number'],
                     'sale_date' => $data['sale_date'],
                     'sale_images' => $uploadedImages,
-                    'created_by' => $user->id,
+                    'created_by' => $user->getOwnerId(),
                 ];
 
                 $sale = $this->saleRepository->create($saleData);
@@ -144,7 +144,7 @@ class SaleService
                             'unit' => $unitName,
                             'movement_type' => 'sale',
                             'transaction_date' => $data['sale_date'],
-                            'user_id' => $user->id,
+                            'user_id' => $user->getOwnerId(),
                         ]);
 
                         // Write Stock Movement Log for alternate unit deduction (negative = outgoing)
@@ -159,7 +159,7 @@ class SaleService
                                 'unit' => $alterUnitName,
                                 'movement_type' => 'sale',
                                 'transaction_date' => $data['sale_date'],
-                                'user_id' => $user->id,
+                                'user_id' => $user->getOwnerId(),
                             ]);
                         }
                     }
@@ -186,7 +186,7 @@ class SaleService
     /**
      * Update a sale (Admin only).
      */
-    public function updateSale(User $user, int $id, array $data): Sale
+    public function updateSale($user, int $id, array $data): Sale
     {
         if ($user->role !== 'admin') {
             throw new AuthorizationException('Only admins are authorized to update sales.');
@@ -300,7 +300,7 @@ class SaleService
                             'unit' => $unitName,
                             'movement_type' => 'sale',
                             'transaction_date' => $data['sale_date'],
-                            'user_id' => $user->id,
+                            'user_id' => $user->getOwnerId(),
                         ]);
 
                         // Log alternate unit movement (negative = outgoing)
@@ -315,7 +315,7 @@ class SaleService
                                 'unit' => $alterUnitName,
                                 'movement_type' => 'sale',
                                 'transaction_date' => $data['sale_date'],
-                                'user_id' => $user->id,
+                                'user_id' => $user->getOwnerId(),
                             ]);
                         }
                     }
@@ -356,7 +356,7 @@ class SaleService
     /**
      * Delete a sale.
      */
-    public function deleteSale(User $user, int $id, bool $force = false): void
+    public function deleteSale($user, int $id, bool $force = false): void
     {
         $sale = $this->saleRepository->findById($id);
 
@@ -364,7 +364,7 @@ class SaleService
             throw new ModelNotFoundException('Sale not found.');
         }
 
-        if ($user->role !== 'admin' && $sale->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$sale->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('You are not authorized to delete this sale.');
         }
 

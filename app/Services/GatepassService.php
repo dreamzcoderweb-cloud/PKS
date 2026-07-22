@@ -24,19 +24,19 @@ class GatepassService
     /**
      * Retrieve all gatepasses depending on user role.
      */
-    public function getGatepassesForUser(User $user): Collection
+    public function getGatepassesForUser($user): Collection
     {
         if ($user->role === 'admin') {
             return $this->gatepassRepository->all();
         }
 
-        return $this->gatepassRepository->findForUser($user->id);
+        return $this->gatepassRepository->findForUser($user->getOwnerId());
     }
 
     /**
      * Retrieve a specific gatepass if authorized.
      */
-    public function getGatepassDetails(User $user, int $id): Gatepass
+    public function getGatepassDetails($user, int $id): Gatepass
     {
         $gatepass = $this->gatepassRepository->findById($id);
 
@@ -44,7 +44,7 @@ class GatepassService
             throw new ModelNotFoundException('Gatepass not found.');
         }
 
-        if ($user->role !== 'admin' && $gatepass->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$gatepass->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('You are not authorized to view this gatepass.');
         }
 
@@ -54,7 +54,7 @@ class GatepassService
     /**
      * Create a gatepass with its details and images.
      */
-    public function createGatepass(User $user, array $data): Gatepass
+    public function createGatepass($user, array $data): Gatepass
     {
         $uploadedImages = [];
         try {
@@ -94,7 +94,7 @@ class GatepassService
                     'remarks' => $data['remarks'] ?? null,
                     'status' => $data['status'] ?? 'pending',
                     'gatepass_images' => $uploadedImages,
-                    'created_by' => $user->id,
+                    'created_by' => $user->getOwnerId(),
                 ];
 
                 $gatepass = $this->gatepassRepository->create($masterData);
@@ -147,7 +147,7 @@ class GatepassService
     /**
      * Update a gatepass (Admin only).
      */
-    public function updateGatepass(User $user, int $id, array $data): Gatepass
+    public function updateGatepass($user, int $id, array $data): Gatepass
     {
         if ($user->role !== 'admin') {
             throw new AuthorizationException('Only admins are authorized to update gatepasses.');
@@ -271,7 +271,7 @@ class GatepassService
     /**
      * Delete a gatepass.
      */
-    public function deleteGatepass(User $user, int $id, bool $force = false): void
+    public function deleteGatepass($user, int $id, bool $force = false): void
     {
         $gatepass = $this->gatepassRepository->findById($id);
 
@@ -279,7 +279,7 @@ class GatepassService
             throw new ModelNotFoundException('Gatepass not found.');
         }
 
-        if ($user->role !== 'admin' && $gatepass->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$gatepass->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('You are not authorized to delete this gatepass.');
         }
 
@@ -307,7 +307,7 @@ class GatepassService
     /**
      * Update status of a gatepass (Admin only).
      */
-    public function updateStatus(User $user, int $id, string $status): Gatepass
+    public function updateStatus($user, int $id, string $status): Gatepass
     {
         if ($user->role !== 'admin') {
             throw new AuthorizationException('Only admins are authorized to update gatepass status.');

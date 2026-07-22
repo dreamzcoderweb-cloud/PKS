@@ -75,4 +75,14 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Branch::class, 'branch_id', 'branch_id');
     }
+
+    /**
+     * Get the ID of the user owning/creating records.
+     *
+     * @return int
+     */
+    public function getOwnerId(): int
+    {
+        return $this->id;
+    }
 }

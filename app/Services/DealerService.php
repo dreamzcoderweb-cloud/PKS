@@ -21,16 +21,16 @@ class DealerService
         $this->dealerRepository = $dealerRepository;
     }
 
-    public function getDealersForUser(User $user, bool $activeOnly = false): Collection
+    public function getDealersForUser($user, bool $activeOnly = false): Collection
     {
         if ($user->role === 'admin') {
             return $this->dealerRepository->all($activeOnly);
         }
 
-        return $this->dealerRepository->findForUser($user->id, $activeOnly);
+        return $this->dealerRepository->findForUser($user->getOwnerId(), $activeOnly);
     }
 
-    public function getDealerDetails(User $user, int $id): Dealer
+    public function getDealerDetails($user, int $id): Dealer
     {
         $dealer = $this->dealerRepository->findById($id);
 
@@ -38,18 +38,18 @@ class DealerService
             throw new ModelNotFoundException('Dealer not found.');
         }
 
-        if ($user->role !== 'admin' && $dealer->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$dealer->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('You are not authorized to view this dealer.');
         }
 
         return $dealer;
     }
 
-    public function createDealer(User $user, array $data): Dealer
+    public function createDealer($user, array $data): Dealer
     {
         return Cache::lock('create_dealer_lock', 10)->block(5, function () use ($user, $data) {
             return DB::transaction(function () use ($user, $data) {
-                $data['created_by'] = $user->id;
+                $data['created_by'] = $user->getOwnerId();
                 $data['dealer_id'] = (string) Str::uuid();
                 $data['dealer_code'] = $this->generateUniqueDealerCode();
 
@@ -58,7 +58,7 @@ class DealerService
         });
     }
 
-    public function updateDealer(User $user, int $id, array $data): Dealer
+    public function updateDealer($user, int $id, array $data): Dealer
     {
         $dealer = $this->dealerRepository->findById($id);
 
@@ -66,7 +66,7 @@ class DealerService
             throw new ModelNotFoundException('Dealer not found.');
         }
 
-        if ($user->role !== 'admin' && $dealer->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$dealer->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('Only admins or the owner can update this dealer.');
         }
 
@@ -75,7 +75,7 @@ class DealerService
         });
     }
 
-    public function deleteDealer(User $user, int $id): void
+    public function deleteDealer($user, int $id): void
     {
         $dealer = $this->dealerRepository->findById($id);
 
@@ -83,7 +83,7 @@ class DealerService
             throw new ModelNotFoundException('Dealer not found.');
         }
 
-        if ($user->role !== 'admin' && $dealer->created_by !== $user->id) {
+        if ($user->role !== 'admin' && (int)$dealer->created_by !== (int)$user->getOwnerId()) {
             throw new AuthorizationException('Only admins or the owner can delete this dealer.');
         }
 

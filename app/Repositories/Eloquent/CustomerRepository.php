@@ -74,4 +74,17 @@ class CustomerRepository implements CustomerRepositoryInterface
     {
         return $customer->delete();
     }
+
+    /**
+     * Find customer by email or mobile number.
+     *
+     * @param string $identifier
+     * @return Customer|null
+     */
+    public function findByIdentifier(string $identifier): ?Customer
+    {
+        return Customer::where('email', $identifier)
+            ->orWhere('mobile_number', $identifier)
+            ->first();
+    }
 }

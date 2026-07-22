@@ -54,4 +54,12 @@ interface CustomerRepositoryInterface
      * @return bool
      */
     public function delete(Customer $customer): bool;
+
+    /**
+     * Find customer by email or mobile number.
+     *
+     * @param string $identifier
+     * @return Customer|null
+     */
+    public function findByIdentifier(string $identifier): ?Customer;
 }
