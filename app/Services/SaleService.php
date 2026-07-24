@@ -419,9 +419,9 @@ class SaleService
 
         // Map Sale details to match the exact structure expected by pdf.gatepass view
         $gatepass = new \stdClass();
-        $gatepass->gatepass_number = 'GP-' . $sale->invoice_number;
-        $gatepass->gatepass_type = 'outward';
-        $gatepass->movement_type = 'sale';
+        $gatepass->gatepass_number = $sale->invoice_number;
+        //$gatepass->gatepass_type = 'outward';
+        //$gatepass->movement_type = 'sale';
         $gatepass->gatepass_date = $sale->sale_date;
         $gatepass->branch = $sale->branch;
         $gatepass->status = 'completed';

@@ -120,39 +120,36 @@
             color: #4a5568;
             font-weight: bold;
         }
-        .images-section {
-            margin-top: 25px;
-            page-break-inside: avoid;
-        }
         .image-container {
-            text-align: left;
-            margin-top: 10px;
-        }
-        .image-card {
-            display: inline-block;
-            margin-right: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #cbd5e0;
-            padding: 6px;
-            border-radius: 6px;
-            background-color: #f8fafc;
-            vertical-align: top;
-        }
-        .image-card img {
-            max-height: 150px;
-            max-width: 220px;
-            width: auto;
-            height: auto;
-            display: block;
-            border-radius: 4px;
-        }
+    width: 100%;
+    margin-top: 10px;
+    overflow: hidden;
+}
+
+.image-card {
+    display: inline-block;
+    vertical-align: top;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    padding: 5px;
+    background: #fff;
+}
+
+.image-card img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    display: block;
+}
+
+
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Gate Pass Document</h1>
-            <p>{{ strtoupper($gatepass->gatepass_type) }} GATE PASS ({{ strtoupper($gatepass->movement_type) }})</p>
         </div>
 
         <table class="meta-table">
@@ -179,72 +176,102 @@
         </table>
 
         <div class="section-title">Party & Movement Information</div>
+
         <table class="meta-table">
             <tr>
                 <td>
-                    @if($gatepass->dealer)
-                        <span class="meta-label">Dealer:</span>
-                        <span class="meta-value">{{ $gatepass->dealer->name }}</span>
-                    @elseif($gatepass->customer)
-                        <span class="meta-label">Customer:</span>
-                        <span class="meta-value">{{ $gatepass->customer->name }}</span>
-                    @else
-                        <span class="meta-label">Party Name:</span>
-                        <span class="meta-value">N/A</span>
-                    @endif
+                    <span class="meta-label">Dealer:</span>
+                    <span class="meta-value">{{ $gatepass->dealer->name }}</span><br>
+
+                    <span class="meta-label">Address:</span>
+                    <span class="meta-value">{{ $gatepass->dealer->address }}</span>
                 </td>
+
                 <td>
-                    @if($gatepass->sale)
-                        <span class="meta-label">Sale Invoice No:</span>
-                        <span class="meta-value">{{ $gatepass->sale->invoice_number }}</span>
-                    @elseif($gatepass->purchase)
-                        <span class="meta-label">Purchase UUID:</span>
-                        <span class="meta-value">{{ substr($gatepass->purchase->purchase_id, 0, 8) }}...</span>
-                    @else
-                        <span class="meta-label">Reference ID:</span>
-                        <span class="meta-value">N/A</span>
-                    @endif
+                    <span class="meta-label">Sale Invoice No:</span>
+                    <span class="meta-value">{{ $gatepass->sale->invoice_number }}</span>
                 </td>
             </tr>
-            <tr>
-                <td>
-                    <span class="meta-label">Transporter:</span>
-                    <span class="meta-value">{{ $gatepass->transporter->name ?? 'N/A' }}</span>
-                </td>
-                <td>
-                    <span class="meta-label">Vehicle Number:</span>
-                    <span class="meta-value">{{ $gatepass->vehicle->name ?? 'N/A' }}</span>
-                </td>
-            </tr>
+
             <tr>
                 <td>
                     <span class="meta-label">Driver Name:</span>
                     <span class="meta-value">{{ $gatepass->driver_name ?? 'N/A' }}</span>
                 </td>
+            </tr>
+
+            <tr>
                 <td>
                     <span class="meta-label">Driver Number:</span>
                     <span class="meta-value">{{ $gatepass->driver_number ?? 'N/A' }}</span>
                 </td>
+
+                <td>
+                    <span class="meta-label">Vehicle Number:</span>
+                    <span class="meta-value">{{ $gatepass->vehicle->name ?? 'N/A' }}</span>
+                </td>
             </tr>
         </table>
+
+            @if(($gatepass->sale && !empty($gatepass->sale->sale_images)) ||
+                ($gatepass->purchase && !empty($gatepass->purchase->purchase_images)))
+
+            <div class="section-title">Images</div>
+
+            <div class="image-container">
+
+                @if($gatepass->sale)
+                    @foreach($gatepass->sale->sale_images as $image)
+                        @php $imagePath = public_path($image); @endphp
+
+                        @if(file_exists($imagePath))
+                            <div class="image-card">
+                                <img src="{{ $imagePath }}" alt="Sale Image">
+                            </div>
+                        @endif
+                    @endforeach
+                @endif
+
+                @if($gatepass->purchase)
+                    @foreach($gatepass->purchase->purchase_images as $image)
+                        @php $imagePath = public_path($image); @endphp
+
+                        @if(file_exists($imagePath))
+                            <div class="image-card">
+                                <img src="{{ $imagePath }}" alt="Purchase Image">
+                            </div>
+                        @endif
+                    @endforeach
+                @endif
+
+            </div>
+
+            @endif
+
 
         <div class="section-title">Item Details</div>
         <table class="details-table">
             <thead>
                 <tr>
                     <th style="width: 5%;">#</th>
-                    <th style="width: 35%;">Stock Item</th>
                     <th style="width: 15%;">Lot Number</th>
+                    <th style="width:5%">Brand</th>
+                    <th style="width: 35%;">Stock</th>
+                    <th style="width: 35%;">Uint</th>
+                    <th style="width: 35%;">Alter Unit</th>
                     <th style="width: 20%; text-align: right;">Quantity</th>
-                    <th style="width: 25%;">Remarks</th>
+                    <th style="width: 25%;">Rate</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($gatepass->details as $index => $detail)
                     <tr>
                         <td>{{ $index + 1 }}</td>
-                        <td>{{ $detail->stock->stock_name ?? 'N/A' }}</td>
                         <td>{{ $detail->lot_number ?? 'N/A' }}</td>
+                        <td>{{ $detail->stock->brand_name ?? 'N/A' }}</td>
+                        <td>{{ $detail->stock->stock_name ?? 'N/A' }}</td>
+                        <td>{{ $detail->unit->unit ?? 'N/A' }}</td>
+                        <td>{{ $detail->alternateUnit->alter_unit ?? 'N/A' }}</td>
                         <td style="text-align: right;">
                             <div>{{ $detail->unit_value }} {{ $detail->unit->unit ?? 'Units' }}</div>
                             @if($detail->alternate_unit_value !== null)
@@ -253,7 +280,7 @@
                                 </div>
                             @endif
                         </td>
-                        <td>{{ $detail->remarks ?? '-' }}</td>
+                        <td>{{ $detail->rate ?? '-' }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -270,41 +297,7 @@
             </div>
         @endif
 
-        @if($gatepass->sale && !empty($gatepass->sale->sale_images))
-            <div class="images-section">
-                <div class="section-title">Sale Images</div>
-                <div class="image-container">
-                    @foreach($gatepass->sale->sale_images as $image)
-                        @php
-                            $imagePath = public_path($image);
-                        @endphp
-                        @if(file_exists($imagePath))
-                            <div class="image-card">
-                                <img src="{{ $imagePath }}" alt="Sale Image" />
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
-        @endif
 
-        @if($gatepass->purchase && !empty($gatepass->purchase->purchase_images))
-            <div class="images-section">
-                <div class="section-title">Purchase Images</div>
-                <div class="image-container">
-                    @foreach($gatepass->purchase->purchase_images as $image)
-                        @php
-                            $imagePath = public_path($image);
-                        @endphp
-                        @if(file_exists($imagePath))
-                            <div class="image-card">
-                                <img src="{{ $imagePath }}" alt="Purchase Image" />
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
-        @endif
 
         <table class="signatures-table">
             <tr>
