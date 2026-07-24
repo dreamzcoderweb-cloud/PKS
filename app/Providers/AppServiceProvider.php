@@ -59,10 +59,6 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\Interfaces\SaleRepositoryInterface::class,
             \App\Repositories\Eloquent\SaleRepository::class
         );
-        $this->app->bind(
-            \App\Repositories\Interfaces\GatepassRepositoryInterface::class,
-            \App\Repositories\Eloquent\GatepassRepository::class
-        );
     }
 
     /**

@@ -120,6 +120,32 @@
             color: #4a5568;
             font-weight: bold;
         }
+        .images-section {
+            margin-top: 25px;
+            page-break-inside: avoid;
+        }
+        .image-container {
+            text-align: left;
+            margin-top: 10px;
+        }
+        .image-card {
+            display: inline-block;
+            margin-right: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #cbd5e0;
+            padding: 6px;
+            border-radius: 6px;
+            background-color: #f8fafc;
+            vertical-align: top;
+        }
+        .image-card img {
+            max-height: 150px;
+            max-width: 220px;
+            width: auto;
+            height: auto;
+            display: block;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -241,6 +267,42 @@
             <div class="remarks-box">
                 <div class="remarks-title">Remarks / Instructions:</div>
                 <div>{{ $gatepass->remarks }}</div>
+            </div>
+        @endif
+
+        @if($gatepass->sale && !empty($gatepass->sale->sale_images))
+            <div class="images-section">
+                <div class="section-title">Sale Images</div>
+                <div class="image-container">
+                    @foreach($gatepass->sale->sale_images as $image)
+                        @php
+                            $imagePath = public_path($image);
+                        @endphp
+                        @if(file_exists($imagePath))
+                            <div class="image-card">
+                                <img src="{{ $imagePath }}" alt="Sale Image" />
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        @if($gatepass->purchase && !empty($gatepass->purchase->purchase_images))
+            <div class="images-section">
+                <div class="section-title">Purchase Images</div>
+                <div class="image-container">
+                    @foreach($gatepass->purchase->purchase_images as $image)
+                        @php
+                            $imagePath = public_path($image);
+                        @endphp
+                        @if(file_exists($imagePath))
+                            <div class="image-card">
+                                <img src="{{ $imagePath }}" alt="Purchase Image" />
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
             </div>
         @endif
 

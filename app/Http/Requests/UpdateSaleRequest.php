@@ -30,7 +30,7 @@ class UpdateSaleRequest extends FormRequest
             'driver_number' => 'required|string|max:255',
             'sale_date' => 'required|date',
             'sale_images' => 'nullable|array|max:3',
-            'sale_images.*' => 'required|image|mimes:jpeg,jpg,png|max:2048',
+            'sale_images.*' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             'details' => 'required|array|min:1',
             'details.*.stock_id' => 'required|exists:stocks,id',
             'details.*.lot_number' => 'required|string|max:255',

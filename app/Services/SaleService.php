@@ -16,6 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SaleService
 {
@@ -407,5 +408,35 @@ class SaleService
                 $sale->delete();
             }
         });
+    }
+
+    /**
+     * Generate PDF for a specific sale (mimicking Gatepass layout).
+     */
+    public function generateGatepassPdf($user, int $saleId)
+    {
+        $sale = $this->getSaleDetails($user, $saleId);
+
+        // Map Sale details to match the exact structure expected by pdf.gatepass view
+        $gatepass = new \stdClass();
+        $gatepass->gatepass_number = 'GP-' . $sale->invoice_number;
+        $gatepass->gatepass_type = 'outward';
+        $gatepass->movement_type = 'sale';
+        $gatepass->gatepass_date = $sale->sale_date;
+        $gatepass->branch = $sale->branch;
+        $gatepass->status = 'completed';
+        $gatepass->dealer = $sale->dealer;
+        $gatepass->customer = null;
+        $gatepass->sale = $sale;
+        $gatepass->purchase = null;
+        $gatepass->transporter = null;
+        $gatepass->vehicle = $sale->vehicle;
+        $gatepass->driver_name = $sale->driver_name;
+        $gatepass->driver_number = $sale->driver_number;
+        $gatepass->remarks = null;
+        $gatepass->user = $sale->user;
+        $gatepass->details = $sale->details;
+
+        return Pdf::loadView('pdf.gatepass', ['gatepass' => $gatepass]);
     }
 }

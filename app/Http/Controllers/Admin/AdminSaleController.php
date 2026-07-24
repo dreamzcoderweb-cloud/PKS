@@ -52,4 +52,10 @@ class AdminSaleController extends Controller
         $this->saleService->deleteSale($request->user(), $id, $force);
         return $this->successResponse('Sale deleted successfully.');
     }
+
+    public function generatePdf(Request $request, int $id)
+    {
+        $pdf = $this->saleService->generateGatepassPdf($request->user(), $id);
+        return $pdf->download('gatepass-sale-' . $id . '.pdf');
+    }
 }

@@ -24,8 +24,6 @@ use App\Http\Controllers\Admin\AdminPurchaseController;
 use App\Http\Controllers\User\UserPurchaseController;
 use App\Http\Controllers\Admin\AdminSaleController;
 use App\Http\Controllers\User\UserSaleController;
-use App\Http\Controllers\Admin\AdminGatepassController;
-use App\Http\Controllers\User\UserGatepassController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -58,10 +56,7 @@ Route::prefix('admin')->group(function () {
         Route::post('purchases/{purchase}', [AdminPurchaseController::class, 'update']);
         Route::apiResource('sales', AdminSaleController::class);
         Route::post('sales/{sale}', [AdminSaleController::class, 'update']);
-        Route::get('gatepasses/{gatepass}/pdf', [AdminGatepassController::class, 'generatePdf']);
-        Route::apiResource('gatepasses', AdminGatepassController::class);
-        Route::post('gatepasses/{gatepass}', [AdminGatepassController::class, 'update']);
-        Route::patch('gatepasses/{gatepass}/status', [AdminGatepassController::class, 'updateStatus']);
+        Route::get('sales/{sale}/pdf', [AdminSaleController::class, 'generatePdf']);
     });
 });
 
@@ -92,6 +87,5 @@ Route::prefix('user')->group(function () {
         Route::apiResource('dealers', UserDealerController::class);
         Route::apiResource('purchases', UserPurchaseController::class)->except(['update']);
         Route::apiResource('sales', UserSaleController::class)->except(['update']);
-        Route::apiResource('gatepasses', UserGatepassController::class)->except(['update']);
     });
 });

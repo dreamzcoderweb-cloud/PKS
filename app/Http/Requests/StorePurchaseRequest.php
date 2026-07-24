@@ -29,7 +29,7 @@ class StorePurchaseRequest extends FormRequest
             'vehicle_id' => 'required|exists:vehicles,vehicle_id',
             'driver_number' => 'required|string|max:255',
             'purchase_images' => 'nullable|array|min:2|max:3',
-            'purchase_images.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'purchase_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'details' => 'required|array|min:1',
             'details.*.brand_name' => 'required|string|max:255',
             'details.*.stock_name' => 'required|string|max:255',
