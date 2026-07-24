@@ -18,6 +18,7 @@ class PurchaseDetail extends Model
         'unit_type',
         'alter_unit_value',
         'alter_unit_type',
+        'rate',
     ];
 
     public function purchase()

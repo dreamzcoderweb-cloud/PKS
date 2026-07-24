@@ -38,6 +38,7 @@ class UpdateSaleRequest extends FormRequest
             'details.*.unit_id' => 'required|exists:units,unit_id',
             'details.*.alternate_unit_value' => 'nullable|numeric|min:0',
             'details.*.alternate_unit_id' => 'nullable|exists:alternate_units,alter_unit_id',
+            'details.*.rate' => 'required|numeric|min:0',
         ];
     }
 
@@ -58,6 +59,8 @@ class UpdateSaleRequest extends FormRequest
             'details.*.unit_value.numeric' => 'Unit Value must be numeric.',
             'details.*.unit_id.required' => 'Unit is mandatory for each sale item.',
             'details.*.alternate_unit_value.numeric' => 'Alternate Unit Value must be numeric.',
+            'details.*.rate.required' => 'Rate is mandatory for each sale item.',
+            'details.*.rate.numeric' => 'Rate must be numeric.',
             'sale_images.max' => 'Maximum 3 images.',
             'sale_images.*.mimes' => 'Allow only valid image formats (JPG, JPEG, PNG).',
         ];

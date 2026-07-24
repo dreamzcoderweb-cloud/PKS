@@ -17,6 +17,7 @@ class SaleDetail extends Model
         'unit_id',
         'alternate_unit_value',
         'alternate_unit_id',
+        'rate',
     ];
 
     public function sale()

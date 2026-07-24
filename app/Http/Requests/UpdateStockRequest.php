@@ -34,6 +34,8 @@ class UpdateStockRequest extends FormRequest
             'alter_unit_id' => 'sometimes|exists:alternate_units,alter_unit_id',
             'unit_value' => 'sometimes|nullable|string|min:0',
             'alter_unit_value' => 'sometimes|nullable|string|min:0',
+            'rate' => 'sometimes|nullable|numeric|min:0',
+            'rate_stock' => 'sometimes|nullable|numeric|min:0',
         ];
     }
 }

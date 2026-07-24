@@ -131,6 +131,7 @@ class SaleService
                             'unit_id' => $detail['unit_id'],
                             'alternate_unit_value' => $detail['alternate_unit_value'] ?? null,
                             'alternate_unit_id' => $detail['alternate_unit_id'] ?? null,
+                            'rate' => $detail['rate'] ?? null,
                         ]);
 
                         // Fetch Unit Names for movements log
@@ -287,6 +288,7 @@ class SaleService
                             'unit_id' => $detail['unit_id'],
                             'alternate_unit_value' => $detail['alternate_unit_value'] ?? null,
                             'alternate_unit_id' => $detail['alternate_unit_id'] ?? null,
+                            'rate' => $detail['rate'] ?? null,
                         ]);
 
                         // Fetch Unit Names

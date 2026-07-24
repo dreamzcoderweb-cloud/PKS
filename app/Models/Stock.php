@@ -27,6 +27,8 @@ class Stock extends Model
         'alter_unit_id',
         'unit_value',
         'alter_unit_value',
+        'rate',
+        'rate_stock',
         'created_by',
     ];
 

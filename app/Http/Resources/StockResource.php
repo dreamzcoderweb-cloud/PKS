@@ -31,6 +31,8 @@ class StockResource extends JsonResource
             'alter_unit' => new AlternateUnitResource($this->whenLoaded('alternateUnit')),
             'unit_value' => $this->unit_value !== null ? (float) $this->unit_value : null,
             'alter_unit_value' => $this->alter_unit_value !== null ? (float) $this->alter_unit_value : null,
+            'rate' => $this->rate !== null ? (float) $this->rate : null,
+            'rate_stock' => $this->rate_stock !== null ? (float) $this->rate_stock : null,
             'created_by' => (int) $this->created_by,
             'user' => new UserResource($this->whenLoaded('user')),
             'created_at' => $this->created_at?->toIso8601String(),

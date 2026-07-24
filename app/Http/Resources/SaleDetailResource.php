@@ -24,6 +24,7 @@ class SaleDetailResource extends JsonResource
             'alternate_unit_value' => $this->alternate_unit_value,
             'alternate_unit_id' => $this->alternate_unit_id,
             'alternate_unit' => new AlternateUnitResource($this->whenLoaded('alternateUnit')),
+            'rate' => $this->rate !== null ? (float) $this->rate : null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

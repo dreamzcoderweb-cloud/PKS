@@ -22,6 +22,7 @@ class PurchaseDetailResource extends JsonResource
             'unit_type' => $this->unit_type,
             'alter_unit_value' => $this->alter_unit_value,
             'alter_unit_type' => $this->alter_unit_type,
+            'rate' => $this->rate !== null ? (float) $this->rate : null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

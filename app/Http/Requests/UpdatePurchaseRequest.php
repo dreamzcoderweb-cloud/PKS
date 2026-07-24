@@ -38,6 +38,7 @@ class UpdatePurchaseRequest extends FormRequest
             'details.*.unit_type' => 'required|string|max:255',
             'details.*.alter_unit_value' => 'required|numeric|min:0',
             'details.*.alter_unit_type' => 'required|string|max:255',
+            'details.*.rate' => 'required|numeric|min:0',
         ];
     }
 }
