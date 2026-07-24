@@ -29,7 +29,7 @@ class StoreSaleRequest extends FormRequest
             'driver_name' => 'required|string|max:255',
             'driver_number' => 'required|string|max:255',
             'sale_date' => 'required|date',
-            'sale_images' => 'required|array|min:2|max:3',
+            'sale_images' => 'nullable|array|max:3',
             'sale_images.*' => 'required|image|mimes:jpeg,jpg,png|max:2048',
             'details' => 'required|array|min:1',
             'details.*.stock_id' => 'required|exists:stocks,id',
@@ -58,8 +58,6 @@ class StoreSaleRequest extends FormRequest
             'details.*.unit_value.numeric' => 'Unit Value must be numeric.',
             'details.*.unit_id.required' => 'Unit is mandatory for each sale item.',
             'details.*.alternate_unit_value.numeric' => 'Alternate Unit Value must be numeric.',
-            'sale_images.required' => 'At least two sale images are required.',
-            'sale_images.min' => 'At least two sale images are required.',
             'sale_images.max' => 'Maximum 3 images.',
             'sale_images.*.mimes' => 'Allow only valid image formats (JPG, JPEG, PNG).',
         ];

@@ -62,4 +62,10 @@ class AdminGatepassController extends Controller
         $gatepass = $this->gatepassService->updateStatus($request->user(), $id, $request->input('status'));
         return $this->successResponse('Gatepass status updated successfully.', new GatepassResource($gatepass));
     }
+
+    public function generatePdf(Request $request, int $id)
+    {
+        $pdf = $this->gatepassService->generateGatepassPdf($request->user(), $id);
+        return $pdf->download('gatepass-' . $id . '.pdf');
+    }
 }

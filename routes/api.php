@@ -58,6 +58,7 @@ Route::prefix('admin')->group(function () {
         Route::post('purchases/{purchase}', [AdminPurchaseController::class, 'update']);
         Route::apiResource('sales', AdminSaleController::class);
         Route::post('sales/{sale}', [AdminSaleController::class, 'update']);
+        Route::get('gatepasses/{gatepass}/pdf', [AdminGatepassController::class, 'generatePdf']);
         Route::apiResource('gatepasses', AdminGatepassController::class);
         Route::post('gatepasses/{gatepass}', [AdminGatepassController::class, 'update']);
         Route::patch('gatepasses/{gatepass}/status', [AdminGatepassController::class, 'updateStatus']);

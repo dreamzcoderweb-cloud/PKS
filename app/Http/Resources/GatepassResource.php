@@ -14,9 +14,6 @@ class GatepassResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'gatepass_number' => $this->gatepass_number,
-            'gatepass_type' => $this->gatepass_type,
-            'movement_type' => $this->movement_type,
             'branch_id' => $this->branch_id,
             'branch' => new BranchResource($this->whenLoaded('branch')),
             'dealer_id' => $this->dealer_id,
@@ -37,12 +34,8 @@ class GatepassResource extends JsonResource
             'vehicle_number' => $this->vehicle?->name,
             'driver_name' => $this->driver_name,
             'driver_number' => $this->driver_number,
-            'gatepass_date' => $this->gatepass_date?->toIso8601String(),
             'remarks' => $this->remarks,
             'status' => $this->status,
-            'gatepass_images' => array_map(function ($image) {
-                return filter_var($image, FILTER_VALIDATE_URL) ? $image : asset($image);
-            }, $this->gatepass_images ?? []),
             'created_by' => $this->created_by,
             'user' => new UserResource($this->whenLoaded('user')),
             'details' => GatepassDetailResource::collection($this->whenLoaded('details')),

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class GatepassService
 {
@@ -90,7 +91,7 @@ class GatepassService
                     'vehicle_id' => $data['vehicle_id'] ?? null,
                     'driver_name' => $data['driver_name'] ?? null,
                     'driver_number' => $data['driver_number'] ?? null,
-                    'gatepass_date' => $data['gatepass_date'],
+                    'gatepass_date' => now(),
                     'remarks' => $data['remarks'] ?? null,
                     'status' => $data['status'] ?? 'pending',
                     'gatepass_images' => $uploadedImages,
@@ -198,7 +199,7 @@ class GatepassService
                     'vehicle_id' => $data['vehicle_id'] ?? null,
                     'driver_name' => $data['driver_name'] ?? null,
                     'driver_number' => $data['driver_number'] ?? null,
-                    'gatepass_date' => $data['gatepass_date'],
+                    'gatepass_date' => $gatepass->gatepass_date ?? now(),
                     'remarks' => $data['remarks'] ?? null,
                     'status' => $data['status'] ?? $gatepass->status,
                     'gatepass_images' => $gatepassImages,
@@ -322,5 +323,14 @@ class GatepassService
         $gatepass = $this->gatepassRepository->update($gatepass, ['status' => $status]);
 
         return $gatepass;
+    }
+
+    /**
+     * Generate PDF for a specific gatepass.
+     */
+    public function generateGatepassPdf($user, int $id)
+    {
+        $gatepass = $this->getGatepassDetails($user, $id);
+        return Pdf::loadView('pdf.gatepass', ['gatepass' => $gatepass]);
     }
 }
