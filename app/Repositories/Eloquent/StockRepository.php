@@ -21,7 +21,7 @@ class StockRepository implements StockRepositoryInterface
             $query->where('brand_name', $brandName);
         }
 
-        return $query->latest()->get(); // Orders by created_at DESC
+        return $query->latest('id')->get();
     }
 
     /**
@@ -36,7 +36,68 @@ class StockRepository implements StockRepositoryInterface
         if ($brandName !== null) {
             $query->where('brand_name', $brandName);
         }
-        return $query->get();
+        return $query->latest('id')->get();
+    }
+
+    /**
+     * Get purchase stock records by joining purchases, purchase details, and stocks.
+     *
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function getPurchaseStocks(?string $brandName = null): Collection
+    {
+        $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit'])
+            ->join('purchase_details', 'stocks.brand_name', '=', 'purchase_details.brand_name')
+            ->join('purchases', 'purchase_details.purchase_id', '=', 'purchases.id')
+            ->select(
+                'stocks.*',
+                'purchases.purchase_id as purchase_uuid',
+                'purchases.lot_number as purchase_lot_number',
+                'purchase_details.unit_value as purchase_unit_value',
+                'purchase_details.unit_type as purchase_unit_type',
+                'purchase_details.alter_unit_value as purchase_alter_unit_value',
+                'purchase_details.alter_unit_type as purchase_alter_unit_type',
+                'purchase_details.rate as purchase_rate'
+            );
+
+        if ($brandName !== null) {
+            $query->where('stocks.brand_name', $brandName);
+        }
+
+        return $query->latest('purchase_details.id')->get();
+    }
+
+    /**
+     * Get purchase stock records for a specific user.
+     *
+     * @param int $userId
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function getPurchaseStocksForUser(int $userId, ?string $brandName = null): Collection
+    {
+        $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit'])
+            ->join('purchase_details', 'stocks.brand_name', '=', 'purchase_details.brand_name')
+            ->join('purchases', 'purchase_details.purchase_id', '=', 'purchases.id')
+            ->select(
+                'stocks.*',
+                'purchases.purchase_id as purchase_uuid',
+                'purchases.lot_number as purchase_lot_number',
+                'purchase_details.unit_value as purchase_unit_value',
+                'purchase_details.unit_type as purchase_unit_type',
+                'purchase_details.alter_unit_value as purchase_alter_unit_value',
+                'purchase_details.alter_unit_type as purchase_alter_unit_type',
+                'purchase_details.rate as purchase_rate'
+            )
+            ->where('stocks.created_by', $userId)
+            ->where('purchases.created_by', $userId);
+
+        if ($brandName !== null) {
+            $query->where('stocks.brand_name', $brandName);
+        }
+
+        return $query->latest('purchase_details.id')->get();
     }
 
     /**

@@ -10,13 +10,14 @@ class SaleRepository implements SaleRepositoryInterface
 {
     public function all(): Collection
     {
-        return Sale::with(['branch', 'dealer', 'vehicle', 'user', 'details.stock', 'details.unit', 'details.alternateUnit'])->get();
+        return Sale::with(['branch', 'dealer', 'vehicle', 'user', 'details.stock', 'details.unit', 'details.alternateUnit'])->latest()->get();
     }
 
     public function findForUser(int $userId): Collection
     {
         return Sale::with(['branch', 'dealer', 'vehicle', 'user', 'details.stock', 'details.unit', 'details.alternateUnit'])
             ->where('created_by', $userId)
+            ->latest()
             ->get();
     }
 

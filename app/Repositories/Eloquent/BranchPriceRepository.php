@@ -15,7 +15,7 @@ class BranchPriceRepository implements BranchPriceRepositoryInterface
      */
     public function all(): Collection
     {
-        return BranchPrice::with('branch')->get();
+        return BranchPrice::with('branch')->latest()->get();
     }
 
     /**

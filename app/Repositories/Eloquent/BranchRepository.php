@@ -15,7 +15,7 @@ class BranchRepository implements BranchRepositoryInterface
      */
     public function all(): Collection
     {
-        return Branch::all();
+        return Branch::latest()->get();
     }
 
     /**

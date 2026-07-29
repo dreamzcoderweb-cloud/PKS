@@ -37,6 +37,22 @@ class StockService
     }
 
     /**
+     * Get purchase stock records filtered by user role.
+     *
+     * @param User $user
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function getPurchaseStocksForUser($user, ?string $brandName = null): Collection
+    {
+        if ($user->role === 'admin') {
+            return $this->stockRepository->getPurchaseStocks($brandName);
+        }
+
+        return $this->stockRepository->getPurchaseStocksForUser($user->getOwnerId(), $brandName);
+    }
+
+    /**
      * Get detailed stock info if authorized.
      *
      * @param User $user

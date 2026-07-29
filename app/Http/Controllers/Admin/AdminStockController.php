@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStockRequest;
 use App\Http\Requests\UpdateStockRequest;
 use App\Http\Resources\StockResource;
+use App\Http\Resources\PurchaseStockResource;
 use App\Services\StockService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +30,11 @@ class AdminStockController extends Controller
     {
         $brandName = $request->query('brand_name') ?? $request->query('brand');
         $stocks = $this->stockService->getStocksForUser($request->user(), $brandName);
-        return $this->successResponse('Stocks retrieved successfully.', StockResource::collection($stocks));
+        $purchaseStocks = $this->stockService->getPurchaseStocksForUser($request->user(), $brandName);
+        return $this->successResponse('Stocks retrieved successfully.', [
+            'stock_list' => StockResource::collection($stocks),
+            'purchase_stock_list' => PurchaseStockResource::collection($purchaseStocks),
+        ]);
     }
 
     /**

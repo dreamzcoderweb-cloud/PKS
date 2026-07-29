@@ -15,7 +15,7 @@ class TransporterRepository implements TransporterRepositoryInterface
      */
     public function all(): Collection
     {
-        return Transporter::with('branch')->get();
+        return Transporter::with('branch')->latest()->get();
     }
 
     /**

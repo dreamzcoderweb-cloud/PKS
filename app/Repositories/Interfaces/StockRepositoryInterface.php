@@ -24,6 +24,23 @@ interface StockRepositoryInterface
     public function findForUser(int $userId, ?string $brandName = null): Collection;
 
     /**
+     * Get purchase stock records.
+     *
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function getPurchaseStocks(?string $brandName = null): Collection;
+
+    /**
+     * Get purchase stock records for a specific user.
+     *
+     * @param int $userId
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function getPurchaseStocksForUser(int $userId, ?string $brandName = null): Collection;
+
+    /**
      * Find stock by ID.
      *
      * @param int $id

@@ -14,7 +14,7 @@ class DealerRepository implements DealerRepositoryInterface
         if ($activeOnly) {
             $query->active();
         }
-        return $query->get();
+        return $query->latest()->get();
     }
 
     public function findForUser(int $userId, bool $activeOnly = false): Collection
@@ -23,7 +23,7 @@ class DealerRepository implements DealerRepositoryInterface
         if ($activeOnly) {
             $query->active();
         }
-        return $query->get();
+        return $query->latest()->get();
     }
 
     public function findById(int $id): ?Dealer

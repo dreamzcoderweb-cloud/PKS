@@ -15,7 +15,7 @@ class CustomerRepository implements CustomerRepositoryInterface
      */
     public function all(): Collection
     {
-        return Customer::with(['branch', 'user'])->get();
+        return Customer::with(['branch', 'user'])->latest()->get();
     }
 
     /**
@@ -26,7 +26,7 @@ class CustomerRepository implements CustomerRepositoryInterface
      */
     public function findForUser(int $userId): Collection
     {
-        return Customer::with(['branch', 'user'])->where('added_by', $userId)->get();
+        return Customer::with(['branch', 'user'])->where('added_by', $userId)->latest()->get();
     }
 
     /**
