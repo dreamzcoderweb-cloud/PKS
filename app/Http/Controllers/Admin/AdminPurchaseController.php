@@ -24,7 +24,12 @@ class AdminPurchaseController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $purchases = $this->purchaseService->getPurchasesForUser($request->user());
+        $purchases = $this->purchaseService->getPurchasesForUser(
+            $request->user(),
+            $request->query('from'),
+            $request->query('to'),
+            $request->query('branch_id')
+        );
         return $this->successResponse('Purchases retrieved successfully.', PurchaseResource::collection($purchases));
     }
 

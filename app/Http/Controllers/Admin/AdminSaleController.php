@@ -24,7 +24,12 @@ class AdminSaleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $sales = $this->saleService->getSalesForUser($request->user());
+        $sales = $this->saleService->getSalesForUser(
+            $request->user(),
+            $request->query('from'),
+            $request->query('to'),
+            $request->query('branch_id')
+        );
         return $this->successResponse('Sales retrieved successfully.', SaleResource::collection($sales));
     }
 

@@ -23,7 +23,12 @@ class UserSaleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $sales = $this->saleService->getSalesForUser($request->user());
+        $sales = $this->saleService->getSalesForUser(
+            $request->user(),
+            $request->query('from'),
+            $request->query('to'),
+            $request->query('branch_id')
+        );
         return $this->successResponse('Sales retrieved successfully.', SaleResource::collection($sales));
     }
 
@@ -44,5 +49,11 @@ class UserSaleController extends Controller
         $force = $request->boolean('force');
         $this->saleService->deleteSale($request->user(), $id, $force);
         return $this->successResponse('Sale deleted successfully.');
+    }
+
+    public function generatePdf(Request $request, int $id)
+    {
+        $pdf = $this->saleService->generateGatepassPdf($request->user(), $id);
+        return $pdf->download('gatepass-sale-' . $id . '.pdf');
     }
 }

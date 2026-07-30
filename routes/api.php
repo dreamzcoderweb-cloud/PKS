@@ -87,5 +87,6 @@ Route::prefix('user')->group(function () {
         Route::apiResource('dealers', UserDealerController::class);
         Route::apiResource('purchases', UserPurchaseController::class)->except(['update']);
         Route::apiResource('sales', UserSaleController::class)->except(['update']);
+        Route::get('gatepasses/{sale}/pdf', [UserSaleController::class, 'generatePdf']);
     });
 });

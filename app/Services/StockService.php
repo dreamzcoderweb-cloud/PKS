@@ -27,13 +27,13 @@ class StockService
      * @param User $user
      * @return Collection
      */
-    public function getStocksForUser($user, ?string $brandName = null): Collection
+    public function getStocksForUser($user, ?string $brandName = null, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
     {
-        if ($user->role === 'admin') {
-            return $this->stockRepository->all($brandName);
-        }
+        $query = $user->role === 'admin'
+            ? $this->stockRepository->all($brandName)
+            : $this->stockRepository->findForUser($user->getOwnerId(), $brandName);
 
-        return $this->stockRepository->findForUser($user->getOwnerId(), $brandName);
+        return $this->applyFilters($query, $from, $to, $branchId);
     }
 
     /**
@@ -41,15 +41,18 @@ class StockService
      *
      * @param User $user
      * @param string|null $brandName
+     * @param string|null $from
+     * @param string|null $to
+     * @param string|null $branchId
      * @return Collection
      */
-    public function getPurchaseStocksForUser($user, ?string $brandName = null): Collection
+    public function getPurchaseStocksForUser($user, ?string $brandName = null, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
     {
-        if ($user->role === 'admin') {
-            return $this->stockRepository->getPurchaseStocks($brandName);
-        }
+        $query = $user->role === 'admin'
+            ? $this->stockRepository->getPurchaseStocks($brandName)
+            : $this->stockRepository->getPurchaseStocksForUser($user->getOwnerId(), $brandName);
 
-        return $this->stockRepository->getPurchaseStocksForUser($user->getOwnerId(), $brandName);
+        return $this->applyFilters($query, $from, $to, $branchId);
     }
 
     /**
@@ -148,6 +151,51 @@ class StockService
 
             $this->stockRepository->delete($stock);
         });
+    }
+
+    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
+    {
+        $filtered = $query;
+
+        if ($from !== null && $from !== '') {
+            $fromDate = $this->parseDate($from);
+            if ($fromDate) {
+                $fromDate = $fromDate->startOfDay();
+                $filtered = $filtered->filter(function ($item) use ($fromDate) {
+                    return $item->created_at && \Carbon\Carbon::parse($item->created_at)->gte($fromDate);
+                });
+            }
+        }
+
+        if ($to !== null && $to !== '') {
+            $toDate = $this->parseDate($to);
+            if ($toDate) {
+                $toDate = $toDate->endOfDay();
+                $filtered = $filtered->filter(function ($item) use ($toDate) {
+                    return $item->created_at && \Carbon\Carbon::parse($item->created_at)->lte($toDate);
+                });
+            }
+        }
+
+        if ($branchId !== null && $branchId !== '') {
+            $filtered = $filtered->filter(function ($item) use ($branchId) {
+                return (string) ($item->branch_id ?? '') === (string) $branchId;
+            });
+        }
+
+        return $filtered->values();
+    }
+
+    protected function parseDate(string $date): ?\Carbon\Carbon
+    {
+        try {
+            if (str_contains($date, '/')) {
+                return \Carbon\Carbon::createFromFormat('d/m/Y', $date);
+            }
+            return \Carbon\Carbon::parse($date);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**

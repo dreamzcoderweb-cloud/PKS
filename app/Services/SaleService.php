@@ -30,13 +30,13 @@ class SaleService
     /**
      * Retrieve all sales depending on user role.
      */
-    public function getSalesForUser($user): Collection
+    public function getSalesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
     {
-        if ($user->role === 'admin') {
-            return $this->saleRepository->all();
-        }
+        $query = $user->role === 'admin'
+            ? $this->saleRepository->all()
+            : $this->saleRepository->findForUser($user->getOwnerId());
 
-        return $this->saleRepository->findForUser($user->getOwnerId());
+        return $this->applyFilters($query, $from, $to, $branchId);
     }
 
     /**
@@ -408,6 +408,48 @@ class SaleService
                 $sale->delete();
             }
         });
+    }
+
+    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
+    {
+        $filtered = $query;
+
+        if ($from !== null && $from !== '') {
+            $filtered = $filtered->filter(function ($item) use ($from) {
+                return $item->created_at && $item->created_at->gte($this->normalizeDate($from));
+            });
+        }
+
+        if ($to !== null && $to !== '') {
+            $filtered = $filtered->filter(function ($item) use ($to) {
+                return $item->created_at && $item->created_at->lte($this->normalizeDate($to));
+            });
+        }
+
+        if ($branchId !== null && $branchId !== '') {
+            $filtered = $filtered->filter(function ($item) use ($branchId) {
+                return (string) ($item->branch_id ?? '') === (string) $branchId;
+            });
+        }
+
+        return $filtered->values();
+    }
+
+    protected function normalizeDate(string $date): string
+    {
+        // Try parsing as d/m/Y format first (e.g., 25/07/2026)
+        $parsed = \Carbon\Carbon::createFromFormat('d/m/Y', $date);
+        if ($parsed) {
+            return $parsed->format('Y-m-d');
+        }
+
+        // Try parsing as Y-m-d format (e.g., 2026-07-25)
+        $parsed = \Carbon\Carbon::createFromFormat('Y-m-d', $date);
+        if ($parsed) {
+            return $parsed->format('Y-m-d');
+        }
+
+        return $date;
     }
 
     /**

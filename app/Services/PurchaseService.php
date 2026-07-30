@@ -2,9 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\AlternateUnit;
 use App\Models\Purchase;
+use App\Models\Stock;
+use App\Models\Unit;
 use App\Models\User;
 use App\Repositories\Interfaces\PurchaseRepositoryInterface;
+use App\Repositories\Interfaces\StockRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -15,22 +19,24 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 class PurchaseService
 {
     protected $purchaseRepository;
+    protected $stockRepository;
 
-    public function __construct(PurchaseRepositoryInterface $purchaseRepository)
+    public function __construct(PurchaseRepositoryInterface $purchaseRepository, ?StockRepositoryInterface $stockRepository = null)
     {
         $this->purchaseRepository = $purchaseRepository;
+        $this->stockRepository = $stockRepository ?? app(StockRepositoryInterface::class);
     }
 
     /**
      * Retrieve all purchases depending on user role.
      */
-    public function getPurchasesForUser($user): Collection
+    public function getPurchasesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
     {
-        if ($user->role === 'admin') {
-            return $this->purchaseRepository->all();
-        }
+        $query = $user->role === 'admin'
+            ? $this->purchaseRepository->all()
+            : $this->purchaseRepository->findForUser($user->getOwnerId());
 
-        return $this->purchaseRepository->findForUser($user->getOwnerId());
+        return $this->applyFilters($query, $from, $to, $branchId);
     }
 
     /**
@@ -87,6 +93,44 @@ class PurchaseService
             $purchase = $this->purchaseRepository->create($purchaseData);
 
             if (isset($data['details'])) {
+                foreach ($data['details'] as $detail) {
+                    $brandName = $detail['brand_name'] ?? null;
+                    $stockName = $detail['stock_name'] ?? null;
+
+                    if (!$brandName || !$stockName) {
+                        continue;
+                    }
+
+                    $existingStock = Stock::where('brand_name', $brandName)
+                        ->where('stock_name', $stockName)
+                        ->first();
+
+                    if ($existingStock) {
+                        continue;
+                    }
+
+                    $unitId = Unit::where('unit', $detail['unit_type'] ?? null)->value('unit_id');
+                    $alternateUnitId = AlternateUnit::where('alter_unit', $detail['alter_unit_type'] ?? null)->value('alter_unit_id');
+
+                    $this->stockRepository->create([
+                        'stock_id' => (string) Str::uuid(),
+                        'brand_name' => $brandName,
+                        'stock_name' => $stockName,
+                        'lott_number' => $detail['lot_number'] ?? $data['lot_number'] ?? null,
+                        'units' => isset($detail['unit_value']) ? (float) $detail['unit_value'] : 0,
+                        'mt' => isset($detail['alter_unit_value']) ? (float) $detail['alter_unit_value'] : 0,
+                        'stock_code' => $this->generateUniqueStockCode(),
+                        'branch_id' => $data['branch_id'],
+                        'unit_id' => $unitId,
+                        'alter_unit_id' => $alternateUnitId,
+                        'unit_value' => isset($detail['unit_value']) ? (float) $detail['unit_value'] : null,
+                        'alter_unit_value' => isset($detail['alter_unit_value']) ? (float) $detail['alter_unit_value'] : null,
+                        'rate' => isset($detail['rate']) ? (float) $detail['rate'] : null,
+                        'rate_stock' => isset($detail['rate']) ? (float) $detail['rate'] : null,
+                        'created_by' => $user->getOwnerId(),
+                    ]);
+                }
+
                 $purchase->details()->createMany($data['details']);
             }
 
@@ -157,6 +201,55 @@ class PurchaseService
 
             return $purchase->load(['branch', 'dealer', 'transporter', 'vehicle', 'user', 'details']);
         });
+    }
+
+    protected function generateUniqueStockCode(): string
+    {
+        $lastCode = (int) Stock::selectRaw('MAX(CAST(stock_code AS UNSIGNED)) as max_code')->value('max_code');
+
+        return (string) ($lastCode + 1);
+    }
+
+    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
+    {
+        $filtered = $query;
+
+        if ($from !== null && $from !== '') {
+            $filtered = $filtered->filter(function ($item) use ($from) {
+                return $item->created_at && $item->created_at->gte($this->normalizeDate($from));
+            });
+        }
+
+        if ($to !== null && $to !== '') {
+            $filtered = $filtered->filter(function ($item) use ($to) {
+                return $item->created_at && $item->created_at->lte($this->normalizeDate($to));
+            });
+        }
+
+        if ($branchId !== null && $branchId !== '') {
+            $filtered = $filtered->filter(function ($item) use ($branchId) {
+                return (string) ($item->branch_id ?? '') === (string) $branchId;
+            });
+        }
+
+        return $filtered->values();
+    }
+
+    protected function normalizeDate(string $date): string
+    {
+        // Try parsing as d/m/Y format first (e.g., 25/07/2026)
+        $parsed = \Carbon\Carbon::createFromFormat('d/m/Y', $date);
+        if ($parsed) {
+            return $parsed->format('Y-m-d');
+        }
+
+        // Try parsing as Y-m-d format (e.g., 2026-07-25)
+        $parsed = \Carbon\Carbon::createFromFormat('Y-m-d', $date);
+        if ($parsed) {
+            return $parsed->format('Y-m-d');
+        }
+
+        return $date;
     }
 
     /**

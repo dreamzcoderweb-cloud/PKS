@@ -29,10 +29,22 @@ class AdminStockController extends Controller
     public function index(Request $request): JsonResponse
     {
         $brandName = $request->query('brand_name') ?? $request->query('brand');
-        $stocks = $this->stockService->getStocksForUser($request->user(), $brandName);
-        $purchaseStocks = $this->stockService->getPurchaseStocksForUser($request->user(), $brandName);
-        // Merge both collections
-        $mergedStocks = $stocks->concat($purchaseStocks)->values();
+        $stocks = $this->stockService->getStocksForUser(
+            $request->user(),
+            $brandName,
+            $request->query('from'),
+            $request->query('to'),
+            $request->query('branch_id')
+        );
+        $purchaseStocks = $this->stockService->getPurchaseStocksForUser(
+            $request->user(),
+            $brandName,
+            $request->query('from'),
+            $request->query('to'),
+            $request->query('branch_id')
+        );
+        // Merge both collections and remove duplicates
+        $mergedStocks = $stocks->concat($purchaseStocks)->unique('id')->values();
 
         return $this->successResponse('Stocks retrieved successfully.', [
             'stock_list' => StockResource::collection($mergedStocks),
