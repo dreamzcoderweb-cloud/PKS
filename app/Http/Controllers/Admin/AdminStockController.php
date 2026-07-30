@@ -31,9 +31,11 @@ class AdminStockController extends Controller
         $brandName = $request->query('brand_name') ?? $request->query('brand');
         $stocks = $this->stockService->getStocksForUser($request->user(), $brandName);
         $purchaseStocks = $this->stockService->getPurchaseStocksForUser($request->user(), $brandName);
+        // Merge both collections
+        $mergedStocks = $stocks->concat($purchaseStocks)->values();
+
         return $this->successResponse('Stocks retrieved successfully.', [
-            'stock_list' => StockResource::collection($stocks),
-            'purchase_stock_list' => PurchaseStockResource::collection($purchaseStocks),
+            'stock_list' => StockResource::collection($mergedStocks),
         ]);
     }
 
