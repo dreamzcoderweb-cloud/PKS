@@ -192,6 +192,9 @@ class StockService
             if (str_contains($date, '/')) {
                 return \Carbon\Carbon::createFromFormat('d/m/Y', $date);
             }
+            if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date)) {
+                return \Carbon\Carbon::createFromFormat('d-m-Y', $date);
+            }
             return \Carbon\Carbon::parse($date);
         } catch (\Throwable $e) {
             return null;

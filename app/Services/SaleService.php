@@ -415,15 +415,25 @@ class SaleService
         $filtered = $query;
 
         if ($from !== null && $from !== '') {
-            $filtered = $filtered->filter(function ($item) use ($from) {
-                return $item->created_at && $item->created_at->gte($this->normalizeDate($from));
-            });
+            $fromDate = $this->parseDate($from);
+            if ($fromDate) {
+                $fromDate = $fromDate->startOfDay();
+                $filtered = $filtered->filter(function ($item) use ($fromDate) {
+                    $itemDate = $item->created_at ?? $item->sale_date;
+                    return $itemDate && \Carbon\Carbon::parse($itemDate)->gte($fromDate);
+                });
+            }
         }
 
         if ($to !== null && $to !== '') {
-            $filtered = $filtered->filter(function ($item) use ($to) {
-                return $item->created_at && $item->created_at->lte($this->normalizeDate($to));
-            });
+            $toDate = $this->parseDate($to);
+            if ($toDate) {
+                $toDate = $toDate->endOfDay();
+                $filtered = $filtered->filter(function ($item) use ($toDate) {
+                    $itemDate = $item->created_at ?? $item->sale_date;
+                    return $itemDate && \Carbon\Carbon::parse($itemDate)->lte($toDate);
+                });
+            }
         }
 
         if ($branchId !== null && $branchId !== '') {
@@ -435,21 +445,19 @@ class SaleService
         return $filtered->values();
     }
 
-    protected function normalizeDate(string $date): string
+    protected function parseDate(string $date): ?\Carbon\Carbon
     {
-        // Try parsing as d/m/Y format first (e.g., 25/07/2026)
-        $parsed = \Carbon\Carbon::createFromFormat('d/m/Y', $date);
-        if ($parsed) {
-            return $parsed->format('Y-m-d');
+        try {
+            if (str_contains($date, '/')) {
+                return \Carbon\Carbon::createFromFormat('d/m/Y', $date);
+            }
+            if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date)) {
+                return \Carbon\Carbon::createFromFormat('d-m-Y', $date);
+            }
+            return \Carbon\Carbon::parse($date);
+        } catch (\Throwable $e) {
+            return null;
         }
-
-        // Try parsing as Y-m-d format (e.g., 2026-07-25)
-        $parsed = \Carbon\Carbon::createFromFormat('Y-m-d', $date);
-        if ($parsed) {
-            return $parsed->format('Y-m-d');
-        }
-
-        return $date;
     }
 
     /**
