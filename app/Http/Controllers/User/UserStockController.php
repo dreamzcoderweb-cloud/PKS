@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStockRequest;
+use App\Http\Requests\UpdateStockRequest;
 use App\Http\Resources\StockResource;
 use App\Http\Resources\PurchaseStockResource;
 use App\Services\StockService;
@@ -65,5 +66,23 @@ class UserStockController extends Controller
     {
         $stock = $this->stockService->getStockDetails($request->user(), $id);
         return $this->successResponse('Stock details retrieved successfully.', new StockResource($stock));
+    }
+
+    /**
+     * Update the specified stock.
+     */
+    public function update(UpdateStockRequest $request, int $id): JsonResponse
+    {
+        $stock = $this->stockService->updateStock($request->user(), $id, $request->validated());
+        return $this->successResponse('Stock updated successfully.', new StockResource($stock));
+    }
+
+    /**
+     * Remove the specified stock.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $this->stockService->deleteStock($request->user(), $id);
+        return $this->successResponse('Stock deleted successfully.');
     }
 }

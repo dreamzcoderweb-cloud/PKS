@@ -68,10 +68,7 @@ Route::prefix('user')->group(function () {
         Route::post('logout', [UserAuthController::class, 'logout']);
         Route::get('profile', [UserAuthController::class, 'profile']);
 
-        // Stock User Operations (no update/delete)
-        Route::get('stocks', [UserStockController::class, 'index']);
-        Route::post('stocks', [UserStockController::class, 'store']);
-        Route::get('stocks/{id}', [UserStockController::class, 'show']);
+        Route::apiResource('stocks', UserStockController::class);
 
         // Customer User Operations (no update/delete)
         Route::get('customers', [UserCustomerController::class, 'index']);

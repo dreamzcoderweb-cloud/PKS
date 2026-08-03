@@ -112,15 +112,15 @@ class StockService
      */
     public function updateStock($user, int $id, array $data): Stock
     {
-        if ($user->role !== 'admin') {
-            throw new AuthorizationException("Only admins are authorized to edit stocks.");
-        }
-
-        return DB::transaction(function () use ($id, $data) {
+        return DB::transaction(function () use ($user, $id, $data) {
             $stock = $this->stockRepository->findById($id);
 
             if (!$stock) {
                 throw new ModelNotFoundException("Stock not found.");
+            }
+
+            if ($user->role !== 'admin' && (int)$stock->created_by !== (int)$user->getOwnerId()) {
+                throw new AuthorizationException("You are not authorized to edit this stock.");
             }
 
             return $this->stockRepository->update($stock, $data);
@@ -128,7 +128,7 @@ class StockService
     }
 
     /**
-     * Delete a stock item (Admin only).
+     * Delete a stock item.
      *
      * @param User $user
      * @param int $id
@@ -138,15 +138,15 @@ class StockService
      */
     public function deleteStock($user, int $id): void
     {
-        if ($user->role !== 'admin') {
-            throw new AuthorizationException("Only admins are authorized to delete stocks.");
-        }
-
-        DB::transaction(function () use ($id) {
+        DB::transaction(function () use ($user, $id) {
             $stock = $this->stockRepository->findById($id);
 
             if (!$stock) {
                 throw new ModelNotFoundException("Stock not found.");
+            }
+
+            if ($user->role !== 'admin' && (int)$stock->created_by !== (int)$user->getOwnerId()) {
+                throw new AuthorizationException("You are not authorized to delete this stock.");
             }
 
             $this->stockRepository->delete($stock);
