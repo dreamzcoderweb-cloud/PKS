@@ -15,6 +15,7 @@ class Sale extends Model
         'branch_id',
         'dealer_id',
         'vehicle_id',
+        'saletype',
         'invoice_number',
         'driver_name',
         'driver_number',
@@ -26,6 +27,7 @@ class Sale extends Model
     protected $casts = [
         'sale_images' => 'array',
         'sale_date' => 'datetime',
+        'saletype' => 'integer',
     ];
 
     public function branch()

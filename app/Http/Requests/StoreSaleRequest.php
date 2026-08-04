@@ -25,6 +25,7 @@ class StoreSaleRequest extends FormRequest
             'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'dealer_id' => 'required|exists:dealers,id',
             'vehicle_id' => 'required|exists:vehicles,vehicle_id',
+            'saletype' => 'nullable|in:0,1,sale,decorticate',
             'invoice_number' => 'required|string|max:255',
             'driver_name' => 'required|string|max:255',
             'driver_number' => 'required|string|max:255',
@@ -48,6 +49,7 @@ class StoreSaleRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'saletype.in' => 'Sale type must be 0 (Sale) or 1 (Decorticate).',
             'dealer_id.required' => 'Dealer Name is required.',
             'vehicle_id.required' => 'Vehicle Number is required.',
             'invoice_number.required' => 'Invoice Number is required.',

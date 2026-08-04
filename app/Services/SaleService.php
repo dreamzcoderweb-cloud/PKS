@@ -30,13 +30,13 @@ class SaleService
     /**
      * Retrieve all sales depending on user role.
      */
-    public function getSalesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
+    public function getSalesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null): Collection
     {
         $query = $user->role === 'admin'
             ? $this->saleRepository->all()
             : $this->saleRepository->findForUser($user->getOwnerId());
 
-        return $this->applyFilters($query, $from, $to, $branchId);
+        return $this->applyFilters($query, $from, $to, $branchId, $saletype);
     }
 
     /**
@@ -80,12 +80,20 @@ class SaleService
                     }
                 }
 
+                $saleTypeInput = $data['saletype'] ?? 0;
+                if (is_string($saleTypeInput) && !is_numeric($saleTypeInput)) {
+                    $saleTypeInput = strtolower(trim($saleTypeInput)) === 'decorticate' ? 1 : 0;
+                } else {
+                    $saleTypeInput = (int) $saleTypeInput;
+                }
+
                 // 2. Create Sale Master record
                 $saleData = [
                     'sale_id' => (string) Str::uuid(),
                     'branch_id' => $data['branch_id'],
                     'dealer_id' => $data['dealer_id'],
                     'vehicle_id' => $data['vehicle_id'],
+                    'saletype' => $saleTypeInput,
                     'invoice_number' => $data['invoice_number'],
                     'driver_name' => $data['driver_name'],
                     'driver_number' => $data['driver_number'],
@@ -239,11 +247,19 @@ class SaleService
                     $saleImages = $newImagesList;
                 }
 
+                $saleTypeInput = $data['saletype'] ?? $sale->saletype ?? 0;
+                if (is_string($saleTypeInput) && !is_numeric($saleTypeInput)) {
+                    $saleTypeInput = strtolower(trim($saleTypeInput)) === 'decorticate' ? 1 : 0;
+                } else {
+                    $saleTypeInput = (int) $saleTypeInput;
+                }
+
                 // 3. Update Sale Master
                 $saleData = [
                     'branch_id' => $data['branch_id'],
                     'dealer_id' => $data['dealer_id'],
                     'vehicle_id' => $data['vehicle_id'],
+                    'saletype' => $saleTypeInput,
                     'invoice_number' => $data['invoice_number'],
                     'driver_name' => $data['driver_name'],
                     'driver_number' => $data['driver_number'],
@@ -410,7 +426,7 @@ class SaleService
         });
     }
 
-    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
+    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null): Collection
     {
         $filtered = $query;
 
@@ -440,6 +456,26 @@ class SaleService
             $filtered = $filtered->filter(function ($item) use ($branchId) {
                 return (string) ($item->branch_id ?? '') === (string) $branchId;
             });
+        }
+
+        if ($saletype !== null && $saletype !== '') {
+            $targetType = null;
+            if (is_numeric($saletype)) {
+                $targetType = (int) $saletype;
+            } else {
+                $normalized = strtolower(trim($saletype));
+                if ($normalized === 'sale') {
+                    $targetType = 0;
+                } elseif ($normalized === 'decorticate') {
+                    $targetType = 1;
+                }
+            }
+
+            if ($targetType !== null) {
+                $filtered = $filtered->filter(function ($item) use ($targetType) {
+                    return (int) ($item->saletype ?? 0) === $targetType;
+                });
+            }
         }
 
         return $filtered->values();

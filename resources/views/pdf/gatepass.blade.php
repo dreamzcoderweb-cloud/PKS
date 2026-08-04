@@ -260,7 +260,6 @@
                     <th style="width: 35%;">Uint</th>
                     <th style="width: 35%;">Alter Unit</th>
                     <th style="width: 20%; text-align: right;">Quantity</th>
-                    <th style="width: 25%;">Rate</th>
                 </tr>
             </thead>
             <tbody>
@@ -280,7 +279,6 @@
                                 </div>
                             @endif
                         </td>
-                        <td>{{ $detail->rate ?? '-' }}</td>
                     </tr>
                 @empty
                     <tr>

@@ -27,7 +27,8 @@ class UserSaleController extends Controller
             $request->user(),
             $request->query('from'),
             $request->query('to'),
-            $request->query('branch_id')
+            $request->query('branch_id'),
+            $request->query('saletype') ?? $request->query('sale_type')
         );
         return $this->successResponse('Sales retrieved successfully.', SaleResource::collection($sales));
     }
