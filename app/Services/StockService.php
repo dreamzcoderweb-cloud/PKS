@@ -29,11 +29,13 @@ class StockService
      */
     public function getStocksForUser($user, ?string $brandName = null, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
     {
+        $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
+
         $query = $user->role === 'admin'
             ? $this->stockRepository->all($brandName)
             : $this->stockRepository->findForUser($user->getOwnerId(), $brandName);
 
-        return $this->applyFilters($query, $from, $to, $branchId);
+        return $this->applyFilters($query, $from, $to, $effectiveBranchId);
     }
 
     /**
@@ -48,11 +50,13 @@ class StockService
      */
     public function getPurchaseStocksForUser($user, ?string $brandName = null, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
     {
+        $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
+
         $query = $user->role === 'admin'
             ? $this->stockRepository->getPurchaseStocks($brandName)
             : $this->stockRepository->getPurchaseStocksForUser($user->getOwnerId(), $brandName);
 
-        return $this->applyFilters($query, $from, $to, $branchId);
+        return $this->applyFilters($query, $from, $to, $effectiveBranchId);
     }
 
     /**
@@ -72,8 +76,13 @@ class StockService
             throw new ModelNotFoundException("Stock not found.");
         }
 
-        if ($user->role !== 'admin' && (int)$stock->created_by !== (int)$user->getOwnerId()) {
-            throw new AuthorizationException("You are not authorized to view this stock.");
+        if ($user->role !== 'admin') {
+            if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                throw new AuthorizationException("You are not authorized to view this stock.");
+            }
+            if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
+                throw new AuthorizationException("You are not authorized to view this stock.");
+            }
         }
 
         return $stock;
@@ -88,7 +97,11 @@ class StockService
      */
     public function createStock($user, array $data): Stock
     {
-        $data['branch_id'] = $data['branch_id'] ?? $user->branch_id;
+        if ($user->role !== 'admin' && !empty($user->branch_id)) {
+            $data['branch_id'] = $user->branch_id;
+        } else {
+            $data['branch_id'] = $data['branch_id'] ?? $user->branch_id;
+        }
         return Cache::lock('create_stock_lock', 10)->block(5, function () use ($user, $data) {
             return DB::transaction(function () use ($user, $data) {
                 $data['created_by'] = $user->getOwnerId();
@@ -119,8 +132,13 @@ class StockService
                 throw new ModelNotFoundException("Stock not found.");
             }
 
-            if ($user->role !== 'admin' && (int)$stock->created_by !== (int)$user->getOwnerId()) {
-                throw new AuthorizationException("You are not authorized to edit this stock.");
+            if ($user->role !== 'admin') {
+                if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                    throw new AuthorizationException("You are not authorized to edit this stock.");
+                }
+                if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
+                    throw new AuthorizationException("You are not authorized to edit this stock.");
+                }
             }
 
             return $this->stockRepository->update($stock, $data);
@@ -145,8 +163,13 @@ class StockService
                 throw new ModelNotFoundException("Stock not found.");
             }
 
-            if ($user->role !== 'admin' && (int)$stock->created_by !== (int)$user->getOwnerId()) {
-                throw new AuthorizationException("You are not authorized to delete this stock.");
+            if ($user->role !== 'admin') {
+                if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                    throw new AuthorizationException("You are not authorized to delete this stock.");
+                }
+                if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
+                    throw new AuthorizationException("You are not authorized to delete this stock.");
+                }
             }
 
             $this->stockRepository->delete($stock);

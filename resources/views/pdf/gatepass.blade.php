@@ -160,7 +160,7 @@
                 </td>
                 <td>
                     <span class="meta-label">Date & Time:</span>
-                    <span class="meta-value">{{ $gatepass->gatepass_date ? $gatepass->gatepass_date->format('d-m-Y') : 'N/A' }}</span>
+                    <span class="meta-value">{{ $gatepass->gatepass_date ? $gatepass->gatepass_date->format('d-m-Y H:i:s') : 'N/A' }}</span>
                 </td>
             </tr>
             <tr>

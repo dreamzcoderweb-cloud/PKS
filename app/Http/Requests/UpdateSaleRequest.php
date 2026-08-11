@@ -23,7 +23,8 @@ class UpdateSaleRequest extends FormRequest
 
         return [
             'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
-            'dealer_id' => 'required|exists:dealers,id',
+            'dealer_id' => 'required_without:dealer_name|nullable|exists:dealers,id',
+            'dealer_name' => 'required_without:dealer_id|nullable|string|max:255',
             'vehicle_id' => 'required|exists:vehicles,vehicle_id',
             'saletype' => 'nullable|in:0,1,sale,decorticate',
             'invoice_number' => 'required|string|max:255',

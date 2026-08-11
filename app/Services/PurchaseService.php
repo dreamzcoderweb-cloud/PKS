@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AlternateUnit;
+use App\Models\Dealer;
 use App\Models\Purchase;
 use App\Models\Stock;
 use App\Models\Unit;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
 
 class PurchaseService
 {
@@ -32,11 +34,13 @@ class PurchaseService
      */
     public function getPurchasesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
     {
+        $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
+
         $query = $user->role === 'admin'
             ? $this->purchaseRepository->all()
             : $this->purchaseRepository->findForUser($user->getOwnerId());
 
-        return $this->applyFilters($query, $from, $to, $branchId);
+        return $this->applyFilters($query, $from, $to, $effectiveBranchId);
     }
 
     /**
@@ -50,8 +54,13 @@ class PurchaseService
             throw new ModelNotFoundException('Purchase not found.');
         }
 
-        if ($user->role !== 'admin' && (int)$purchase->created_by !== (int)$user->getOwnerId()) {
-            throw new AuthorizationException('You are not authorized to view this purchase.');
+        if ($user->role !== 'admin') {
+            if ((int)$purchase->created_by !== (int)$user->getOwnerId()) {
+                throw new AuthorizationException('You are not authorized to view this purchase.');
+            }
+            if ($user->branch_id !== null && (string)$purchase->branch_id !== (string)$user->branch_id) {
+                throw new AuthorizationException('You are not authorized to view this purchase.');
+            }
         }
 
         return $purchase;
@@ -62,8 +71,15 @@ class PurchaseService
      */
     public function createPurchase($user, array $data): Purchase
     {
-        $data['branch_id'] = $data['branch_id'] ?? $user->branch_id;
-        return DB::transaction(function () use ($user, $data) {
+        if ($user->role !== 'admin' && !empty($user->branch_id)) {
+            $data['branch_id'] = $user->branch_id;
+        } else {
+            $data['branch_id'] = $data['branch_id'] ?? $user->branch_id;
+        }
+
+        $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
+
+        return DB::transaction(function () use ($user, $data, $dealerId) {
             $storedImages = [];
             if (isset($data['purchase_images'])) {
                 $targetDir = app()->runningUnitTests() ? Storage::disk('public')->path('purchases') : public_path('purchases');
@@ -81,7 +97,7 @@ class PurchaseService
             $purchaseData = [
                 'purchase_id' => (string) Str::uuid(),
                 'branch_id' => $data['branch_id'],
-                'dealer_id' => $data['dealer_id'],
+                'dealer_id' => $dealerId,
                 'lot_number' => $data['lot_number'],
                 'transporter_id' => $data['transporter_id'],
                 'vehicle_id' => $data['vehicle_id'],
@@ -153,10 +169,12 @@ class PurchaseService
             throw new ModelNotFoundException('Purchase not found.');
         }
 
-        return DB::transaction(function () use ($purchase, $data) {
+        $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
+
+        return DB::transaction(function () use ($purchase, $data, $dealerId) {
             $purchaseData = [
                 'branch_id' => $data['branch_id'],
-                'dealer_id' => $data['dealer_id'],
+                'dealer_id' => $dealerId,
                 'lot_number' => $data['lot_number'],
                 'transporter_id' => $data['transporter_id'],
                 'vehicle_id' => $data['vehicle_id'],
@@ -269,8 +287,13 @@ class PurchaseService
             throw new ModelNotFoundException('Purchase not found.');
         }
 
-        if ($user->role !== 'admin' && (int)$purchase->created_by !== (int)$user->getOwnerId()) {
-            throw new AuthorizationException('You are not authorized to delete this purchase.');
+        if ($user->role !== 'admin') {
+            if ((int)$purchase->created_by !== (int)$user->getOwnerId()) {
+                throw new AuthorizationException('You are not authorized to delete this purchase.');
+            }
+            if ($user->branch_id !== null && (string)$purchase->branch_id !== (string)$user->branch_id) {
+                throw new AuthorizationException('You are not authorized to delete this purchase.');
+            }
         }
 
         DB::transaction(function () use ($purchase) {
@@ -289,5 +312,54 @@ class PurchaseService
             $purchase->details()->delete();
             $this->purchaseRepository->delete($purchase);
         });
+    }
+
+    protected function resolveDealerId($user, $branchId, array $data): int
+    {
+        $dealerId = $data['dealer_id'] ?? null;
+        $dealerName = $data['dealer_name'] ?? null;
+
+        if (!empty($dealerId)) {
+            $dealer = Dealer::where('id', $dealerId)->first();
+            if (!$dealer || (string)$dealer->branch_id !== (string)$branchId) {
+                throw ValidationException::withMessages([
+                    'dealer_id' => ['The selected dealer does not belong to the specified branch.']
+                ]);
+            }
+            return (int) $dealer->id;
+        }
+
+        if (!empty($dealerName)) {
+            $dealerName = trim($dealerName);
+
+            $existing = Dealer::where('branch_id', $branchId)
+                ->where(function ($q) use ($dealerName) {
+                    $q->where('name', $dealerName)
+                      ->orWhere(DB::raw('LOWER(name)'), strtolower($dealerName));
+                })->first();
+
+            if ($existing) {
+                return (int) $existing->id;
+            }
+
+            $lastCode = (int) Dealer::selectRaw('MAX(CAST(dealer_code AS UNSIGNED)) as max_code')->value('max_code');
+            $newDealer = Dealer::create([
+                'dealer_id' => (string) Str::uuid(),
+                'dealer_code' => (string) ($lastCode + 1),
+                'branch_id' => $branchId,
+                'name' => $dealerName,
+                'business_name' => $data['business_name'] ?? $dealerName,
+                'contact_number' => $data['contact_number'] ?? '',
+                'address' => $data['address'] ?? '',
+                'status' => 1,
+                'created_by' => $user->getOwnerId(),
+            ]);
+
+            return (int) $newDealer->id;
+        }
+
+        throw ValidationException::withMessages([
+            'dealer_id' => ['Either dealer_id or dealer_name is required.']
+        ]);
     }
 }

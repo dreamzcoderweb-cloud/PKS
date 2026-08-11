@@ -23,7 +23,8 @@ class StorePurchaseRequest extends FormRequest
 
         return [
             'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
-            'dealer_id' => 'required|exists:dealers,id',
+            'dealer_id' => 'required_without:dealer_name|nullable|exists:dealers,id',
+            'dealer_name' => 'required_without:dealer_id|nullable|string|max:255',
             'lot_number' => 'required|string|max:255',
             'transporter_id' => 'required|exists:transporters,transporter_id',
             'vehicle_id' => 'required|exists:vehicles,vehicle_id',
