@@ -24,6 +24,10 @@ use App\Http\Controllers\Admin\AdminPurchaseController;
 use App\Http\Controllers\User\UserPurchaseController;
 use App\Http\Controllers\Admin\AdminSaleController;
 use App\Http\Controllers\User\UserSaleController;
+use App\Http\Controllers\Mob\Admin\AdminMobPurchaseController;
+use App\Http\Controllers\Mob\Admin\AdminMobSaleController;
+use App\Http\Controllers\Mob\User\UserMobPurchaseController;
+use App\Http\Controllers\Mob\User\UserMobSaleController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -57,6 +61,16 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('sales', AdminSaleController::class);
         Route::post('sales/{sale}', [AdminSaleController::class, 'update']);
         Route::get('sales/{sale}/pdf', [AdminSaleController::class, 'generatePdf']);
+
+        // Admin Mobile App (mob) Routes
+        Route::prefix('mob')->group(function () {
+            Route::apiResource('purchases', AdminMobPurchaseController::class);
+            Route::post('purchases/{purchase}', [AdminMobPurchaseController::class, 'update']);
+            Route::apiResource('sales', AdminMobSaleController::class);
+            Route::post('sales/{sale}', [AdminMobSaleController::class, 'update']);
+            Route::get('sales/{sale}/pdf', [AdminMobSaleController::class, 'generatePdf']);
+            Route::get('gatepasses/{sale}/pdf', [AdminMobSaleController::class, 'generatePdf']);
+        });
     });
 });
 
@@ -85,5 +99,12 @@ Route::prefix('user')->group(function () {
         Route::apiResource('purchases', UserPurchaseController::class)->except(['update']);
         Route::apiResource('sales', UserSaleController::class)->except(['update']);
         Route::get('gatepasses/{sale}/pdf', [UserSaleController::class, 'generatePdf']);
+
+        // User Mobile App (mob) Routes
+        Route::prefix('mob')->group(function () {
+            Route::apiResource('purchases', UserMobPurchaseController::class)->except(['update']);
+            Route::apiResource('sales', UserMobSaleController::class)->except(['update']);
+            Route::get('gatepasses/{sale}/pdf', [UserMobSaleController::class, 'generatePdf']);
+        });
     });
 });
