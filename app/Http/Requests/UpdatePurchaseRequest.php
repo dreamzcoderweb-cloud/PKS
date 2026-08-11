@@ -27,7 +27,8 @@ class UpdatePurchaseRequest extends FormRequest
             'dealer_name' => 'required_without:dealer_id|nullable|string|max:255',
             'lot_number' => 'required|string|max:255',
             'transporter_id' => 'required|exists:transporters,transporter_id',
-            'vehicle_id' => 'required|exists:vehicles,vehicle_id',
+            'vehicle_id' => 'required_without:vehicle_number|nullable|exists:vehicles,vehicle_id',
+            'vehicle_number' => 'required_without:vehicle_id|nullable|string|max:255',
             'driver_number' => 'required|string|max:255',
             'purchase_images' => 'nullable|array|max:3',
             'purchase_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -39,7 +40,7 @@ class UpdatePurchaseRequest extends FormRequest
             'details.*.unit_type' => 'required|string|max:255',
             'details.*.alter_unit_value' => 'required|numeric|min:0',
             'details.*.alter_unit_type' => 'required|string|max:255',
-            'details.*.rate' => 'required|numeric|min:0',
+            'details.*.rate' => 'nullable|numeric|min:0',
         ];
     }
 }

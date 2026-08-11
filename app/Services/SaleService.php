@@ -9,6 +9,7 @@ use App\Models\StockMovement;
 use App\Models\Unit;
 use App\Models\AlternateUnit;
 use App\Models\Dealer;
+use App\Models\Vehicle;
 use App\Repositories\Interfaces\SaleRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -77,10 +78,11 @@ class SaleService
         }
 
         $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
+        $vehicleId = $this->resolveVehicleId($data['vehicle_id'] ?? null, $data['vehicle_number'] ?? null);
 
         $uploadedImages = [];
         try {
-            return DB::transaction(function () use ($user, $data, $dealerId, &$uploadedImages) {
+            return DB::transaction(function () use ($user, $data, $dealerId, $vehicleId, &$uploadedImages) {
                 // 1. Process and upload images
                 if (isset($data['sale_images'])) {
                     $targetDir = app()->runningUnitTests() ? Storage::disk('public')->path('sales') : public_path('sales');
@@ -107,7 +109,7 @@ class SaleService
                     'sale_id' => (string) Str::uuid(),
                     'branch_id' => $data['branch_id'],
                     'dealer_id' => $dealerId,
-                    'vehicle_id' => $data['vehicle_id'],
+                    'vehicle_id' => $vehicleId,
                     'saletype' => $saleTypeInput,
                     'invoice_number' => $data['invoice_number'],
                     'driver_name' => $data['driver_name'],
@@ -271,11 +273,12 @@ class SaleService
 
                 // 3. Update Sale Master
                 $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
+                $vehicleId = $this->resolveVehicleId($data['vehicle_id'] ?? null, $data['vehicle_number'] ?? null);
 
                 $saleData = [
                     'branch_id' => $data['branch_id'],
                     'dealer_id' => $dealerId,
-                    'vehicle_id' => $data['vehicle_id'],
+                    'vehicle_id' => $vehicleId,
                     'saletype' => $saleTypeInput,
                     'invoice_number' => $data['invoice_number'],
                     'driver_name' => $data['driver_name'],
@@ -594,6 +597,46 @@ class SaleService
 
         throw ValidationException::withMessages([
             'dealer_id' => ['Either dealer_id or dealer_name is required.']
+        ]);
+    }
+
+    protected function resolveVehicleId($vehicleId = null, ?string $vehicleNumber = null): int
+    {
+        if (!empty($vehicleId)) {
+            $vehicle = Vehicle::where('vehicle_id', $vehicleId)->first();
+            if (!$vehicle) {
+                throw ValidationException::withMessages([
+                    'vehicle_id' => ['The selected vehicle is invalid.']
+                ]);
+            }
+            return (int) $vehicle->vehicle_id;
+        }
+
+        if (!empty($vehicleNumber)) {
+            $vehicleNumber = trim($vehicleNumber);
+
+            $existing = Vehicle::where('name', $vehicleNumber)
+                ->orWhere(DB::raw('LOWER(name)'), strtolower($vehicleNumber))
+                ->first();
+
+            if ($existing) {
+                return (int) $existing->vehicle_id;
+            }
+
+            $isLorry = preg_match('/\d/', $vehicleNumber);
+            $vehicleType = $isLorry ? 'lorry' : 'local';
+
+            $newVehicle = Vehicle::create([
+                'vehicle_type' => $vehicleType,
+                'name' => $vehicleNumber,
+                'status' => 1,
+            ]);
+
+            return (int) $newVehicle->vehicle_id;
+        }
+
+        throw ValidationException::withMessages([
+            'vehicle_id' => ['Either vehicle_id or vehicle_number is required.']
         ]);
     }
 }

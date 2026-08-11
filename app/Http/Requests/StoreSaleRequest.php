@@ -25,7 +25,8 @@ class StoreSaleRequest extends FormRequest
             'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'dealer_id' => 'required_without:dealer_name|nullable|exists:dealers,id',
             'dealer_name' => 'required_without:dealer_id|nullable|string|max:255',
-            'vehicle_id' => 'required|exists:vehicles,vehicle_id',
+            'vehicle_id' => 'required_without:vehicle_number|nullable|exists:vehicles,vehicle_id',
+            'vehicle_number' => 'required_without:vehicle_id|nullable|string|max:255',
             'saletype' => 'nullable|in:0,1,sale,decorticate',
             'invoice_number' => 'required|string|max:255',
             'driver_name' => 'required|string|max:255',
@@ -40,7 +41,7 @@ class StoreSaleRequest extends FormRequest
             'details.*.unit_id' => 'required|exists:units,unit_id',
             'details.*.alternate_unit_value' => 'nullable|numeric|min:0',
             'details.*.alternate_unit_id' => 'nullable|exists:alternate_units,alter_unit_id',
-            'details.*.rate' => 'required|numeric|min:0',
+            'details.*.rate' => 'nullable|numeric|min:0',
         ];
     }
 

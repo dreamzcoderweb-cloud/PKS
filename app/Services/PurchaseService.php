@@ -8,6 +8,7 @@ use App\Models\Purchase;
 use App\Models\Stock;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\Vehicle;
 use App\Repositories\Interfaces\PurchaseRepositoryInterface;
 use App\Repositories\Interfaces\StockRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
@@ -78,8 +79,9 @@ class PurchaseService
         }
 
         $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
+        $vehicleId = $this->resolveVehicleId($data['vehicle_id'] ?? null, $data['vehicle_number'] ?? null);
 
-        return DB::transaction(function () use ($user, $data, $dealerId) {
+        return DB::transaction(function () use ($user, $data, $dealerId, $vehicleId) {
             $storedImages = [];
             if (isset($data['purchase_images'])) {
                 $targetDir = app()->runningUnitTests() ? Storage::disk('public')->path('purchases') : public_path('purchases');
@@ -100,7 +102,7 @@ class PurchaseService
                 'dealer_id' => $dealerId,
                 'lot_number' => $data['lot_number'],
                 'transporter_id' => $data['transporter_id'],
-                'vehicle_id' => $data['vehicle_id'],
+                'vehicle_id' => $vehicleId,
                 'driver_number' => $data['driver_number'],
                 'purchase_images' => $storedImages,
                 'created_by' => $user->getOwnerId(),
@@ -170,14 +172,15 @@ class PurchaseService
         }
 
         $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
+        $vehicleId = $this->resolveVehicleId($data['vehicle_id'] ?? null, $data['vehicle_number'] ?? null);
 
-        return DB::transaction(function () use ($purchase, $data, $dealerId) {
+        return DB::transaction(function () use ($purchase, $data, $dealerId, $vehicleId) {
             $purchaseData = [
                 'branch_id' => $data['branch_id'],
                 'dealer_id' => $dealerId,
                 'lot_number' => $data['lot_number'],
                 'transporter_id' => $data['transporter_id'],
-                'vehicle_id' => $data['vehicle_id'],
+                'vehicle_id' => $vehicleId,
                 'driver_number' => $data['driver_number'],
             ];
 
@@ -360,6 +363,46 @@ class PurchaseService
 
         throw ValidationException::withMessages([
             'dealer_id' => ['Either dealer_id or dealer_name is required.']
+        ]);
+    }
+
+    protected function resolveVehicleId($vehicleId = null, ?string $vehicleNumber = null): int
+    {
+        if (!empty($vehicleId)) {
+            $vehicle = Vehicle::where('vehicle_id', $vehicleId)->first();
+            if (!$vehicle) {
+                throw ValidationException::withMessages([
+                    'vehicle_id' => ['The selected vehicle is invalid.']
+                ]);
+            }
+            return (int) $vehicle->vehicle_id;
+        }
+
+        if (!empty($vehicleNumber)) {
+            $vehicleNumber = trim($vehicleNumber);
+
+            $existing = Vehicle::where('name', $vehicleNumber)
+                ->orWhere(DB::raw('LOWER(name)'), strtolower($vehicleNumber))
+                ->first();
+
+            if ($existing) {
+                return (int) $existing->vehicle_id;
+            }
+
+            $isLorry = preg_match('/\d/', $vehicleNumber);
+            $vehicleType = $isLorry ? 'lorry' : 'local';
+
+            $newVehicle = Vehicle::create([
+                'vehicle_type' => $vehicleType,
+                'name' => $vehicleNumber,
+                'status' => 1,
+            ]);
+
+            return (int) $newVehicle->vehicle_id;
+        }
+
+        throw ValidationException::withMessages([
+            'vehicle_id' => ['Either vehicle_id or vehicle_number is required.']
         ]);
     }
 }
