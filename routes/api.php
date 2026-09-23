@@ -48,6 +48,9 @@ Route::prefix('admin')->group(function () {
         Route::get('profile', [AdminAuthController::class, 'profile']);
 
         Route::apiResource('stocks', AdminStockController::class);
+        Route::get('stocks/{stock}/buy-details', [AdminStockController::class, 'getBuyDetails']);
+        Route::get('stocks/{stock}/details', [AdminStockController::class, 'getBuyDetails']);
+        Route::get('stocks/{stock}/pdf', [AdminStockController::class, 'generateBuyDetailsPdf']);
         Route::apiResource('customers', AdminCustomerController::class);
         Route::apiResource('branches', AdminBranchController::class);
         Route::apiResource('branch-prices', AdminBranchPriceController::class);
@@ -70,6 +73,9 @@ Route::prefix('admin')->group(function () {
             Route::post('sales/{sale}', [AdminMobSaleController::class, 'update']);
             Route::get('sales/{sale}/pdf', [AdminMobSaleController::class, 'generatePdf']);
             Route::get('gatepasses/{sale}/pdf', [AdminMobSaleController::class, 'generatePdf']);
+            Route::get('stocks/{stock}/buy-details', [AdminStockController::class, 'getBuyDetails']);
+            Route::get('stocks/{stock}/details', [AdminStockController::class, 'getBuyDetails']);
+            Route::get('stocks/{stock}/pdf', [AdminStockController::class, 'generateBuyDetailsPdf']);
         });
     });
 });
@@ -83,6 +89,9 @@ Route::prefix('user')->group(function () {
         Route::get('profile', [UserAuthController::class, 'profile']);
 
         Route::apiResource('stocks', UserStockController::class);
+        Route::get('stocks/{stock}/buy-details', [UserStockController::class, 'getBuyDetails']);
+        Route::get('stocks/{stock}/details', [UserStockController::class, 'getBuyDetails']);
+        Route::get('stocks/{stock}/pdf', [UserStockController::class, 'generateBuyDetailsPdf']);
 
         // Customer User Operations (no update/delete)
         Route::get('customers', [UserCustomerController::class, 'index']);
@@ -105,6 +114,9 @@ Route::prefix('user')->group(function () {
             Route::apiResource('purchases', UserMobPurchaseController::class)->except(['update']);
             Route::apiResource('sales', UserMobSaleController::class)->except(['update']);
             Route::get('gatepasses/{sale}/pdf', [UserMobSaleController::class, 'generatePdf']);
+            Route::get('stocks/{stock}/buy-details', [UserStockController::class, 'getBuyDetails']);
+            Route::get('stocks/{stock}/details', [UserStockController::class, 'getBuyDetails']);
+            Route::get('stocks/{stock}/pdf', [UserStockController::class, 'generateBuyDetailsPdf']);
         });
     });
 });

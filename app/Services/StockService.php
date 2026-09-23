@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Stock;
 use App\Models\User;
+use App\Models\PurchaseDetail;
 use App\Repositories\Interfaces\StockRepositoryInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class StockService
 {
@@ -237,4 +239,122 @@ class StockService
 
         return (string) ($lastCode + 1);
     }
+
+    /**
+     * Retrieve stock buy/purchase details.
+     *
+     * @param User $user
+     * @param string|int $identifier
+     * @return array
+     */
+    public function getStockBuyDetails($user, string|int $identifier): array
+    {
+        $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit']);
+
+        if (is_numeric($identifier)) {
+            $stock = (clone $query)->where('id', $identifier)->first()
+                ?? (clone $query)->where('stock_id', (string) $identifier)->first()
+                ?? (clone $query)->where('stock_code', (string) $identifier)->first();
+        } else {
+            $stock = (clone $query)->where('stock_id', $identifier)->first()
+                ?? (clone $query)->where('stock_code', $identifier)->first();
+        }
+
+        if (!$stock) {
+            throw new ModelNotFoundException("Stock not found.");
+        }
+
+        if ($user->role !== 'admin') {
+            if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                throw new AuthorizationException("You are not authorized to view this stock.");
+            }
+            if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
+                throw new AuthorizationException("You are not authorized to view this stock.");
+            }
+        }
+
+        // Attempt to find purchase detail matching brand_name and stock_name
+        $purchaseDetailQuery = PurchaseDetail::with(['purchase.dealer', 'purchase.branch', 'purchase.vehicle'])
+            ->where('brand_name', $stock->brand_name)
+            ->where('stock_name', $stock->stock_name);
+
+        if (!empty($stock->lott_number)) {
+            $purchaseDetail = (clone $purchaseDetailQuery)->where('lot_number', $stock->lott_number)->latest('id')->first();
+        } else {
+            $purchaseDetail = null;
+        }
+
+        if (!$purchaseDetail) {
+            $purchaseDetail = $purchaseDetailQuery->latest('id')->first();
+        }
+
+        $dealer = $purchaseDetail?->purchase?->dealer;
+        $customerName = $dealer?->name ?? $dealer?->business_name ?? 'N/A';
+        $dealerName = $dealer?->name ?? 'N/A';
+
+        // Bag: from purchase detail if present, otherwise stock units
+        $bag = $purchaseDetail ? (float) $purchaseDetail->unit_value : (float) $stock->units;
+        $unitType = $purchaseDetail?->unit_type ?? $stock->unit?->unit ?? 'Bags';
+
+        // Rate: from purchase detail or stock rate
+        $rate = $purchaseDetail && $purchaseDetail->rate !== null
+            ? (float) $purchaseDetail->rate
+            : ($stock->rate !== null ? (float) $stock->rate : ($stock->rate_stock !== null ? (float) $stock->rate_stock : 0.00));
+
+        // Buy Date: from purchase created_at, or stock created_at
+        $buyDateRaw = $purchaseDetail?->purchase?->created_at ?? $purchaseDetail?->created_at ?? $stock->created_at;
+        $buyDateFormatted = $buyDateRaw ? \Carbon\Carbon::parse($buyDateRaw)->format('d-m-Y') : 'N/A';
+        $buyDateTime = $buyDateRaw ? \Carbon\Carbon::parse($buyDateRaw)->format('d-m-Y H:i:s') : 'N/A';
+
+        $totalAmount = $bag * $rate;
+
+        return [
+            'id' => $stock->id,
+            'stock_id' => $stock->stock_id,
+            'stock_code' => $stock->stock_code,
+            'customer_name' => $customerName,
+            'dealer_name' => $dealerName,
+            'dealer' => $dealer ? [
+                'id' => $dealer->id,
+                'name' => $dealer->name,
+                'business_name' => $dealer->business_name,
+                'contact_number' => $dealer->contact_number,
+                'address' => $dealer->address,
+            ] : null,
+            'stock' => $stock->stock_name,
+            'stock_name' => $stock->stock_name,
+            'brand_name' => $stock->brand_name,
+            'lot_number' => $stock->lott_number ?? $purchaseDetail?->lot_number ?? 'N/A',
+            'bag' => $bag,
+            'unit_type' => $unitType,
+            'alternate_unit_value' => $purchaseDetail ? (float) $purchaseDetail->alter_unit_value : ($stock->mt ? (float) $stock->mt : null),
+            'alternate_unit_type' => $purchaseDetail?->alter_unit_type ?? $stock->alternateUnit?->alter_unit ?? 'KGs',
+            'rate' => $rate,
+            'total_amount' => round($totalAmount, 2),
+            'buy_date' => $buyDateFormatted,
+            'buy_date_raw' => $buyDateRaw ? \Carbon\Carbon::parse($buyDateRaw)->toIso8601String() : null,
+            'buy_date_time' => $buyDateTime,
+            'branch' => [
+                'branch_id' => $stock->branch_id,
+                'name' => $stock->branch?->name ?? 'N/A',
+            ],
+            'vehicle_number' => $purchaseDetail?->purchase?->vehicle?->name ?? null,
+            'driver_number' => $purchaseDetail?->purchase?->driver_number ?? null,
+        ];
+    }
+
+    /**
+     * Generate PDF for stock buy details.
+     *
+     * @param User $user
+     * @param string|int $identifier
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function generateStockBuyDetailsPdf($user, string|int $identifier)
+    {
+        $details = $this->getStockBuyDetails($user, $identifier);
+
+        return Pdf::loadView('pdf.stock_details', ['data' => (object) $details]);
+    }
 }
+

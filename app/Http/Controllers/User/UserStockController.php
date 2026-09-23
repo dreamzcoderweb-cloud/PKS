@@ -85,4 +85,23 @@ class UserStockController extends Controller
         $this->stockService->deleteStock($request->user(), $id);
         return $this->successResponse('Stock deleted successfully.');
     }
+
+    /**
+     * Get stock buy details (Customer name, stock, bag, rate, buy date).
+     */
+    public function getBuyDetails(Request $request, string $id): JsonResponse
+    {
+        $details = $this->stockService->getStockBuyDetails($request->user(), $id);
+        return $this->successResponse('Stock buy details retrieved successfully.', $details);
+    }
+
+    /**
+     * Generate PDF for stock buy details.
+     */
+    public function generateBuyDetailsPdf(Request $request, string $id)
+    {
+        $pdf = $this->stockService->generateStockBuyDetailsPdf($request->user(), $id);
+        return $pdf->download('stock-details-' . $id . '.pdf');
+    }
 }
+

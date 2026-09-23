@@ -26,8 +26,8 @@ class StoreDealerRequest extends FormRequest
         return [
             'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'name' => 'required|string|max:255',
-            'business_name' => 'required|string|max:255',
-            'contact_number' => 'required|string|max:20|unique:dealers,contact_number',
+            'business_name' => 'nullable|string|max:255',
+            'contact_number' => 'nullable|string|max:20|unique:dealers,contact_number',
             'address' => 'required|string',
         ];
     }
