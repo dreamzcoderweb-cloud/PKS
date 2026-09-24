@@ -92,7 +92,16 @@ class UserStockController extends Controller
     public function getBuyDetails(Request $request, string $id): JsonResponse
     {
         $details = $this->stockService->getStockBuyDetails($request->user(), $id);
-        return $this->successResponse('Stock buy details retrieved successfully.', $details);
+        return $this->successResponse('Stock details retrieved successfully.', $details);
+    }
+
+    /**
+     * Get stock sale details / sale report (Dealers, bags, sales list, remaining stock).
+     */
+    public function getSaleDetails(Request $request, string $id): JsonResponse
+    {
+        $details = $this->stockService->getStockSaleDetails($request->user(), $id);
+        return $this->successResponse('Stock sale details retrieved successfully.', $details);
     }
 
     /**
@@ -102,6 +111,15 @@ class UserStockController extends Controller
     {
         $pdf = $this->stockService->generateStockBuyDetailsPdf($request->user(), $id);
         return $pdf->download('stock-details-' . $id . '.pdf');
+    }
+
+    /**
+     * Generate PDF for stock sale details / sale report.
+     */
+    public function generateSaleDetailsPdf(Request $request, string $id)
+    {
+        $pdf = $this->stockService->generateStockSaleDetailsPdf($request->user(), $id);
+        return $pdf->download('stock-sale-report-' . $id . '.pdf');
     }
 }
 

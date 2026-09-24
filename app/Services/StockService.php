@@ -242,12 +242,14 @@ class StockService
 
     /**
      * Retrieve stock buy/purchase details.
+    /**
+     * Helper to find stock by numeric ID, UUID stock_id, or stock_code with authorization checks.
      *
      * @param User $user
      * @param string|int $identifier
-     * @return array
+     * @return Stock
      */
-    public function getStockBuyDetails($user, string|int $identifier): array
+    public function findStockByIdentifier($user, string|int $identifier): Stock
     {
         $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit']);
 
@@ -273,6 +275,115 @@ class StockService
             }
         }
 
+        return $stock;
+    }
+
+    /**
+     * Helper to aggregate all sales associated with a specific stock.
+     *
+     * @param Stock $stock
+     * @return array
+     */
+    public function getStockSalesSummary(Stock $stock): array
+    {
+        $saleDetails = \App\Models\SaleDetail::with(['sale.dealer', 'sale.branch', 'sale.vehicle', 'unit', 'alternateUnit'])
+            ->where('stock_id', $stock->id)
+            ->latest('id')
+            ->get();
+
+        $salesList = [];
+        $totalSoldBags = 0.0;
+        $totalSoldAltValue = 0.0;
+        $totalSaleAmount = 0.0;
+        $dealersSummary = [];
+
+        foreach ($saleDetails as $sd) {
+            $sale = $sd->sale;
+            $saleDealer = $sale?->dealer;
+            $bagQty = (float) $sd->unit_value;
+            $altQty = $sd->alternate_unit_value !== null ? (float) $sd->alternate_unit_value : null;
+            $rate = $sd->rate !== null ? (float) $sd->rate : 0.0;
+            $itemTotal = $bagQty * $rate;
+
+            $totalSoldBags += $bagQty;
+            if ($altQty !== null) {
+                $totalSoldAltValue += $altQty;
+            }
+            $totalSaleAmount += $itemTotal;
+
+            $dealerName = $saleDealer?->name ?? 'N/A';
+            $dealerId = $saleDealer?->id;
+
+            if ($dealerId) {
+                if (!isset($dealersSummary[$dealerId])) {
+                    $dealersSummary[$dealerId] = [
+                        'dealer_id' => $dealerId,
+                        'dealer_code' => $saleDealer?->dealer_code,
+                        'name' => $dealerName,
+                        'dealer_name' => $dealerName,
+                        'business_name' => $saleDealer?->business_name,
+                        'contact_number' => $saleDealer?->contact_number,
+                        'address' => $saleDealer?->address,
+                        'bags' => 0.0,
+                        'unit_type' => $sd->unit?->unit ?? $stock->unit?->unit ?? 'Bags',
+                        'alternate_unit_value' => 0.0,
+                        'alternate_unit_type' => $sd->alternateUnit?->alter_unit ?? $stock->alternateUnit?->alter_unit ?? 'KGs',
+                        'total_amount' => 0.0,
+                    ];
+                }
+                $dealersSummary[$dealerId]['bags'] += $bagQty;
+                if ($altQty !== null) {
+                    $dealersSummary[$dealerId]['alternate_unit_value'] += $altQty;
+                }
+                $dealersSummary[$dealerId]['total_amount'] += $itemTotal;
+            }
+
+            $salesList[] = [
+                'id' => $sd->id,
+                'sale_id' => $sale?->id,
+                'sale_uuid' => $sale?->sale_id,
+                'invoice_number' => $sale?->invoice_number,
+                'sale_date' => $sale?->sale_date ? \Carbon\Carbon::parse($sale->sale_date)->format('d-m-Y') : null,
+                'sale_date_raw' => $sale?->sale_date ? \Carbon\Carbon::parse($sale->sale_date)->toIso8601String() : null,
+                'sale_date_time' => $sale?->sale_date ? \Carbon\Carbon::parse($sale->sale_date)->format('d-m-Y H:i:s') : null,
+                'dealer_id' => $dealerId,
+                'dealer_name' => $dealerName,
+                'business_name' => $saleDealer?->business_name,
+                'contact_number' => $saleDealer?->contact_number,
+                'address' => $saleDealer?->address,
+                'lot_number' => $sd->lot_number,
+                'bag' => $bagQty,
+                'unit_type' => $sd->unit?->unit ?? $stock->unit?->unit ?? 'Bags',
+                'alternate_unit_value' => $altQty,
+                'alternate_unit_type' => $sd->alternateUnit?->alter_unit ?? $stock->alternateUnit?->alter_unit ?? 'KGs',
+                'rate' => $rate,
+                'total_amount' => round($itemTotal, 2),
+                'vehicle_number' => $sale?->vehicle?->name,
+                'driver_name' => $sale?->driver_name,
+                'driver_number' => $sale?->driver_number,
+            ];
+        }
+
+        return [
+            'sales' => $salesList,
+            'dealers' => array_values($dealersSummary),
+            'total_sold_bags' => $totalSoldBags,
+            'total_sold_alternate_unit_value' => $totalSoldAltValue,
+            'total_sale_amount' => round($totalSaleAmount, 2),
+        ];
+    }
+
+    /**
+     * Retrieve stock buy/purchase details (with associated sales summary).
+     *
+     * @param User $user
+     * @param string|int $identifier
+     * @return array
+     */
+    public function getStockBuyDetails($user, string|int $identifier): array
+    {
+        $stock = $this->findStockByIdentifier($user, $identifier);
+
         // Attempt to find purchase detail matching brand_name and stock_name
         $purchaseDetailQuery = PurchaseDetail::with(['purchase.dealer', 'purchase.branch', 'purchase.vehicle'])
             ->where('brand_name', $stock->brand_name)
@@ -289,8 +400,31 @@ class StockService
         }
 
         $dealer = $purchaseDetail?->purchase?->dealer;
-        $customerName = $dealer?->name ?? $dealer?->business_name ?? 'N/A';
-        $dealerName = $dealer?->name ?? 'N/A';
+        $customerName = $dealer?->name ?? $dealer?->business_name ?? null;
+        $dealerName = $dealer?->name ?? null;
+
+        // Sales summary for this stock
+        $salesSummary = $this->getStockSalesSummary($stock);
+
+        // If purchase dealer is not available, check sales dealers so name is not empty
+        if (empty($dealerName) && !empty($salesSummary['dealers'])) {
+            $dealerNames = array_map(function ($d) {
+                return $d['dealer_name'];
+            }, $salesSummary['dealers']);
+            $dealerName = implode(', ', $dealerNames);
+            $customerName = $dealerName;
+            $dealer = count($salesSummary['dealers']) === 1 ? [
+                'id' => $salesSummary['dealers'][0]['dealer_id'],
+                'name' => $salesSummary['dealers'][0]['dealer_name'],
+                'business_name' => $salesSummary['dealers'][0]['business_name'],
+                'contact_number' => $salesSummary['dealers'][0]['contact_number'],
+                'address' => $salesSummary['dealers'][0]['address'],
+            ] : [
+                'id' => null,
+                'name' => $dealerName,
+                'dealers_list' => $salesSummary['dealers'],
+            ];
+        }
 
         // Bag: from purchase detail if present, otherwise stock units
         $bag = $purchaseDetail ? (float) $purchaseDetail->unit_value : (float) $stock->units;
@@ -312,15 +446,15 @@ class StockService
             'id' => $stock->id,
             'stock_id' => $stock->stock_id,
             'stock_code' => $stock->stock_code,
-            'customer_name' => $customerName,
-            'dealer_name' => $dealerName,
-            'dealer' => $dealer ? [
+            'customer_name' => $customerName ?? 'N/A',
+            'dealer_name' => $dealerName ?? 'N/A',
+            'dealer' => $dealer ? (is_array($dealer) ? $dealer : [
                 'id' => $dealer->id,
                 'name' => $dealer->name,
                 'business_name' => $dealer->business_name,
                 'contact_number' => $dealer->contact_number,
                 'address' => $dealer->address,
-            ] : null,
+            ]) : null,
             'stock' => $stock->stock_name,
             'stock_name' => $stock->stock_name,
             'brand_name' => $stock->brand_name,
@@ -340,6 +474,49 @@ class StockService
             ],
             'vehicle_number' => $purchaseDetail?->purchase?->vehicle?->name ?? null,
             'driver_number' => $purchaseDetail?->purchase?->driver_number ?? null,
+            'total_sold_bags' => $salesSummary['total_sold_bags'],
+            'total_sold_alternate_unit_value' => $salesSummary['total_sold_alternate_unit_value'],
+            'remaining_bags' => (float) $stock->units,
+            'remaining_alternate_unit_value' => (float) $stock->mt,
+            'dealers' => $salesSummary['dealers'],
+            'sales' => $salesSummary['sales'],
+        ];
+    }
+
+    /**
+     * Retrieve stock sale details / sale report.
+     *
+     * @param User $user
+     * @param string|int $identifier
+     * @return array
+     */
+    public function getStockSaleDetails($user, string|int $identifier): array
+    {
+        $stock = $this->findStockByIdentifier($user, $identifier);
+        $salesSummary = $this->getStockSalesSummary($stock);
+
+        return [
+            'id' => $stock->id,
+            'stock_id' => $stock->stock_id,
+            'stock_code' => $stock->stock_code,
+            'stock_name' => $stock->stock_name,
+            'brand_name' => $stock->brand_name,
+            'lot_number' => $stock->lott_number ?? 'N/A',
+            'unit_type' => $stock->unit?->unit ?? 'Bags',
+            'alternate_unit_type' => $stock->alternateUnit?->alter_unit ?? 'KGs',
+            'total_sold_bags' => $salesSummary['total_sold_bags'],
+            'total_sold_alternate_unit_value' => $salesSummary['total_sold_alternate_unit_value'],
+            'total_sale_amount' => $salesSummary['total_sale_amount'],
+            'remaining_bags' => (float) $stock->units,
+            'remaining_alternate_unit_value' => (float) $stock->mt,
+            'initial_bags' => $salesSummary['total_sold_bags'] + (float) $stock->units,
+            'dealers' => $salesSummary['dealers'],
+            'sales' => $salesSummary['sales'],
+            'branch' => [
+                'branch_id' => $stock->branch_id,
+                'name' => $stock->branch?->name ?? 'N/A',
+            ],
+            'created_at' => $stock->created_at ? \Carbon\Carbon::parse($stock->created_at)->format('d-m-Y H:i:s') : null,
         ];
     }
 
@@ -355,6 +532,20 @@ class StockService
         $details = $this->getStockBuyDetails($user, $identifier);
 
         return Pdf::loadView('pdf.stock_details', ['data' => (object) $details]);
+    }
+
+    /**
+     * Generate PDF for stock sale details / sale report.
+     *
+     * @param User $user
+     * @param string|int $identifier
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function generateStockSaleDetailsPdf($user, string|int $identifier)
+    {
+        $details = $this->getStockSaleDetails($user, $identifier);
+
+        return Pdf::loadView('pdf.stock_sale_details', ['data' => (object) $details]);
     }
 }
 
