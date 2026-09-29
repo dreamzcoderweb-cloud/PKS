@@ -69,8 +69,11 @@ class UserAuthController extends Controller
     {
         $user = $request->user();
         if ($user instanceof \App\Models\Customer) {
+            $user->loadMissing('branch');
             return $this->successResponse('Profile details retrieved.', new CustomerResource($user));
         }
+
+        $user->loadMissing('branch');
         return $this->successResponse('Profile details retrieved.', new UserResource($user));
     }
 }

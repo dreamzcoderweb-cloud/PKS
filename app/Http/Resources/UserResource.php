@@ -21,6 +21,7 @@ class UserResource extends JsonResource
             'role' => $this->role,
             'mobile_number' => $this->mobile_number,
             'branch_id' => $this->branch_id,
+            'branch_name' => $this->branch?->name,
             'status' => $this->status,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
