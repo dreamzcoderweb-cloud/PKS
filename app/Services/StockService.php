@@ -426,9 +426,9 @@ class StockService
             ];
         }
 
-        // Bag: from purchase detail if present, otherwise stock units
-        $bag = $purchaseDetail ? (float) $purchaseDetail->unit_value : (float) $stock->units;
-        $unitType = $purchaseDetail?->unit_type ?? $stock->unit?->unit ?? 'Bags';
+        // Bag: current available stock units
+        $bag = (float) $stock->units;
+        $unitType = $stock->unit?->unit ?? $purchaseDetail?->unit_type ?? 'Bags';
 
         // Rate: from purchase detail or stock rate
         $rate = $purchaseDetail && $purchaseDetail->rate !== null
@@ -461,8 +461,8 @@ class StockService
             'lot_number' => $stock->lott_number ?? $purchaseDetail?->lot_number ?? 'N/A',
             'bag' => $bag,
             'unit_type' => $unitType,
-            'alternate_unit_value' => $purchaseDetail ? (float) $purchaseDetail->alter_unit_value : ($stock->mt ? (float) $stock->mt : null),
-            'alternate_unit_type' => $purchaseDetail?->alter_unit_type ?? $stock->alternateUnit?->alter_unit ?? 'KGs',
+            'alternate_unit_value' => $stock->mt !== null ? (float) $stock->mt : ($purchaseDetail ? (float) $purchaseDetail->alter_unit_value : null),
+            'alternate_unit_type' => $stock->alternateUnit?->alter_unit ?? $purchaseDetail?->alter_unit_type ?? 'KGs',
             'rate' => $rate,
             'total_amount' => round($totalAmount, 2),
             'buy_date' => $buyDateFormatted,
