@@ -189,7 +189,12 @@
 
                 <td>
                     <span class="meta-label">Sale Invoice No:</span>
-                    <span class="meta-value">{{ $gatepass->sale->invoice_number }}</span>
+                    <span class="meta-value">{{ $gatepass->sale->invoice_number }}</span><br>
+
+                    @if(isset($gatepass->sale->saletype))
+                    <span class="meta-label">Sale Type:</span>
+                    <span class="meta-value">{{ \App\Models\Sale::getSaleTypeText($gatepass->sale->saletype) }}</span>
+                    @endif
                 </td>
             </tr>
 

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Stock;
+use App\Models\Sale;
 use App\Models\User;
 use App\Models\PurchaseDetail;
 use App\Repositories\Interfaces\StockRepositoryInterface;
@@ -361,6 +362,8 @@ class StockService
                 'vehicle_number' => $sale?->vehicle?->name,
                 'driver_name' => $sale?->driver_name,
                 'driver_number' => $sale?->driver_number,
+                'saletype' => (int) ($sale?->saletype ?? 0),
+                'saletype_text' => Sale::getSaleTypeText($sale?->saletype),
             ];
         }
 

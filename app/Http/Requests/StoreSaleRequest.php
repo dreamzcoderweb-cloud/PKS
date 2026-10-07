@@ -15,6 +15,16 @@ class StoreSaleRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('sale_type') && !$this->has('saletype')) {
+            $this->merge(['saletype' => $this->input('sale_type')]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
@@ -27,7 +37,7 @@ class StoreSaleRequest extends FormRequest
             'dealer_name' => 'required_without:dealer_id|nullable|string|max:255',
             'vehicle_id' => 'required_without:vehicle_number|nullable|exists:vehicles,vehicle_id',
             'vehicle_number' => 'required_without:vehicle_id|nullable|string|max:255',
-            'saletype' => 'nullable|in:0,1,sale,decorticate',
+            'saletype' => 'nullable|in:0,1,2,sale,decorticate,cash sale,cash_sale,cashsale,cash',
             'invoice_number' => 'required|string|max:255',
             'driver_name' => 'required|string|max:255',
             'driver_number' => 'required|string|max:255',
@@ -51,7 +61,8 @@ class StoreSaleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'saletype.in' => 'Sale type must be 0 (Sale) or 1 (Decorticate).',
+            'saletype.in' => 'Sale type must be 0 (Sale), 1 (Decorticate), or 2 (Cash Sale).',
+            'sale_type.in' => 'Sale type must be 0 (Sale), 1 (Decorticate), or 2 (Cash Sale).',
             'dealer_id.required' => 'Dealer Name is required.',
             'vehicle_id.required' => 'Vehicle Number is required.',
             'invoice_number.required' => 'Invoice Number is required.',

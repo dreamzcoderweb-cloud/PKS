@@ -97,12 +97,7 @@ class SaleService
                     }
                 }
 
-                $saleTypeInput = $data['saletype'] ?? 0;
-                if (is_string($saleTypeInput) && !is_numeric($saleTypeInput)) {
-                    $saleTypeInput = strtolower(trim($saleTypeInput)) === 'decorticate' ? 1 : 0;
-                } else {
-                    $saleTypeInput = (int) $saleTypeInput;
-                }
+                $saleTypeInput = Sale::parseSaleType($data['saletype'] ?? $data['sale_type'] ?? 0);
 
                 // 2. Create Sale Master record
                 $saleData = [
@@ -264,12 +259,9 @@ class SaleService
                     $saleImages = $newImagesList;
                 }
 
-                $saleTypeInput = $data['saletype'] ?? $sale->saletype ?? 0;
-                if (is_string($saleTypeInput) && !is_numeric($saleTypeInput)) {
-                    $saleTypeInput = strtolower(trim($saleTypeInput)) === 'decorticate' ? 1 : 0;
-                } else {
-                    $saleTypeInput = (int) $saleTypeInput;
-                }
+                $saleTypeInput = isset($data['saletype']) || isset($data['sale_type'])
+                    ? Sale::parseSaleType($data['saletype'] ?? $data['sale_type'])
+                    : (int) ($sale->saletype ?? 0);
 
                 // 3. Update Sale Master
                 $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
@@ -490,9 +482,11 @@ class SaleService
             } else {
                 $normalized = strtolower(trim($saletype));
                 if ($normalized === 'sale') {
-                    $targetType = 0;
+                    $targetType = Sale::TYPE_SALE;
                 } elseif ($normalized === 'decorticate') {
-                    $targetType = 1;
+                    $targetType = Sale::TYPE_DECORTICATE;
+                } elseif (in_array($normalized, ['cash sale', 'cash_sale', 'cashsale', 'cash'])) {
+                    $targetType = Sale::TYPE_CASH_SALE;
                 }
             }
 

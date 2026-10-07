@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sales', function (Blueprint $table) {
-            $table->tinyInteger('saletype')->default(0)->comment('0: Sale, 1: Decorticate')->after('vehicle_id');
+            $table->tinyInteger('saletype')->default(0)->comment('0: Sale, 1: Decorticate, 2: Cash Sale')->after('vehicle_id');
         });
     }
 

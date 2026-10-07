@@ -19,7 +19,7 @@ class UserMobSaleResource extends JsonResource
             'vehicle_id' => $this->vehicle_id,
             'vehicle_number' => $this->vehicle?->name,
             'saletype' => (int) ($this->saletype ?? 0),
-            'saletype_text' => ($this->saletype ?? 0) == 1 ? 'Decorticate' : 'Sale',
+            'saletype_text' => \App\Models\Sale::getSaleTypeText($this->saletype),
             'invoice_number' => $this->invoice_number,
             'driver_name' => $this->driver_name,
             'driver_number' => $this->driver_number,

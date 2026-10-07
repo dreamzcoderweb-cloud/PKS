@@ -10,6 +10,47 @@ class Sale extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const TYPE_SALE = 0;
+    public const TYPE_DECORTICATE = 1;
+    public const TYPE_CASH_SALE = 2;
+
+    public const TYPES = [
+        self::TYPE_SALE => 'Sale',
+        self::TYPE_DECORTICATE => 'Decorticate',
+        self::TYPE_CASH_SALE => 'Cash Sale',
+    ];
+
+    public static function getSaleTypeText(?int $type): string
+    {
+        return self::TYPES[(int) ($type ?? 0)] ?? 'Sale';
+    }
+
+    public static function parseSaleType(mixed $value): int
+    {
+        if (is_numeric($value)) {
+            $intVal = (int) $value;
+            if (array_key_exists($intVal, self::TYPES)) {
+                return $intVal;
+            }
+            return self::TYPE_SALE;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+            if ($normalized === 'decorticate') {
+                return self::TYPE_DECORTICATE;
+            }
+            if (in_array($normalized, ['cash sale', 'cash_sale', 'cashsale', 'cash'])) {
+                return self::TYPE_CASH_SALE;
+            }
+            if ($normalized === 'sale') {
+                return self::TYPE_SALE;
+            }
+        }
+
+        return self::TYPE_SALE;
+    }
+
     protected $fillable = [
         'sale_id',
         'branch_id',
