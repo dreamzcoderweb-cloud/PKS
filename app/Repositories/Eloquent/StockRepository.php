@@ -40,6 +40,22 @@ class StockRepository implements StockRepositoryInterface
     }
 
     /**
+     * Get stocks belonging to a branch.
+     *
+     * @param int $branchId
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function findForBranch(int $branchId, ?string $brandName = null): Collection
+    {
+        $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit'])->where('branch_id', $branchId);
+        if ($brandName !== null) {
+            $query->where('brand_name', $brandName);
+        }
+        return $query->latest('id')->get();
+    }
+
+    /**
      * Get purchase stock records by joining purchases, purchase details, and stocks.
      *
      * @param string|null $brandName
@@ -92,6 +108,38 @@ class StockRepository implements StockRepositoryInterface
             )
             ->where('stocks.created_by', $userId)
             ->where('purchases.created_by', $userId);
+
+        if ($brandName !== null) {
+            $query->where('stocks.brand_name', $brandName);
+        }
+
+        return $query->latest('purchase_details.id')->get();
+    }
+
+    /**
+     * Get purchase stock records for a specific branch.
+     *
+     * @param int $branchId
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function getPurchaseStocksForBranch(int $branchId, ?string $brandName = null): Collection
+    {
+        $query = Stock::with(['user', 'branch', 'unit', 'alternateUnit'])
+            ->join('purchase_details', 'stocks.brand_name', '=', 'purchase_details.brand_name')
+            ->join('purchases', 'purchase_details.purchase_id', '=', 'purchases.id')
+            ->select(
+                'stocks.*',
+                'purchases.purchase_id as purchase_uuid',
+                'purchases.lot_number as purchase_lot_number',
+                'purchase_details.unit_value as purchase_unit_value',
+                'purchase_details.unit_type as purchase_unit_type',
+                'purchase_details.alter_unit_value as purchase_alter_unit_value',
+                'purchase_details.alter_unit_type as purchase_alter_unit_type',
+                'purchase_details.rate as purchase_rate'
+            )
+            ->where('stocks.branch_id', $branchId)
+            ->where('purchases.branch_id', $branchId);
 
         if ($brandName !== null) {
             $query->where('stocks.brand_name', $brandName);

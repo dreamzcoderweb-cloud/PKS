@@ -24,6 +24,15 @@ interface StockRepositoryInterface
     public function findForUser(int $userId, ?string $brandName = null): Collection;
 
     /**
+     * Get stocks belonging to a branch.
+     *
+     * @param int $branchId
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function findForBranch(int $branchId, ?string $brandName = null): Collection;
+
+    /**
      * Get purchase stock records.
      *
      * @param string|null $brandName
@@ -39,6 +48,15 @@ interface StockRepositoryInterface
      * @return Collection
      */
     public function getPurchaseStocksForUser(int $userId, ?string $brandName = null): Collection;
+
+    /**
+     * Get purchase stock records for a specific branch.
+     *
+     * @param int $branchId
+     * @param string|null $brandName
+     * @return Collection
+     */
+    public function getPurchaseStocksForBranch(int $branchId, ?string $brandName = null): Collection;
 
     /**
      * Find stock by ID.

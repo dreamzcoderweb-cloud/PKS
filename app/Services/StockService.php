@@ -34,9 +34,13 @@ class StockService
     {
         $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
 
-        $query = $user->role === 'admin'
-            ? $this->stockRepository->all($brandName)
-            : $this->stockRepository->findForUser($user->getOwnerId(), $brandName);
+        if ($effectiveBranchId) {
+            $query = $this->stockRepository->findForBranch((int)$effectiveBranchId, $brandName);
+        } elseif ($user->role === 'admin') {
+            $query = $this->stockRepository->all($brandName);
+        } else {
+            $query = $this->stockRepository->findForUser($user->getOwnerId(), $brandName);
+        }
 
         return $this->applyFilters($query, $from, $to, $effectiveBranchId);
     }
@@ -55,9 +59,13 @@ class StockService
     {
         $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
 
-        $query = $user->role === 'admin'
-            ? $this->stockRepository->getPurchaseStocks($brandName)
-            : $this->stockRepository->getPurchaseStocksForUser($user->getOwnerId(), $brandName);
+        if ($effectiveBranchId) {
+            $query = $this->stockRepository->getPurchaseStocksForBranch((int)$effectiveBranchId, $brandName);
+        } elseif ($user->role === 'admin') {
+            $query = $this->stockRepository->getPurchaseStocks($brandName);
+        } else {
+            $query = $this->stockRepository->getPurchaseStocksForUser($user->getOwnerId(), $brandName);
+        }
 
         return $this->applyFilters($query, $from, $to, $effectiveBranchId);
     }
@@ -80,11 +88,14 @@ class StockService
         }
 
         if ($user->role !== 'admin') {
-            if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
-                throw new AuthorizationException("You are not authorized to view this stock.");
-            }
-            if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
-                throw new AuthorizationException("You are not authorized to view this stock.");
+            if ($user->branch_id !== null) {
+                if ((string)$stock->branch_id !== (string)$user->branch_id) {
+                    throw new AuthorizationException("You are not authorized to view this stock.");
+                }
+            } else {
+                if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                    throw new AuthorizationException("You are not authorized to view this stock.");
+                }
             }
         }
 
@@ -136,11 +147,14 @@ class StockService
             }
 
             if ($user->role !== 'admin') {
-                if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
-                    throw new AuthorizationException("You are not authorized to edit this stock.");
-                }
-                if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
-                    throw new AuthorizationException("You are not authorized to edit this stock.");
+                if ($user->branch_id !== null) {
+                    if ((string)$stock->branch_id !== (string)$user->branch_id) {
+                        throw new AuthorizationException("You are not authorized to edit this stock.");
+                    }
+                } else {
+                    if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                        throw new AuthorizationException("You are not authorized to edit this stock.");
+                    }
                 }
             }
 
@@ -167,11 +181,14 @@ class StockService
             }
 
             if ($user->role !== 'admin') {
-                if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
-                    throw new AuthorizationException("You are not authorized to delete this stock.");
-                }
-                if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
-                    throw new AuthorizationException("You are not authorized to delete this stock.");
+                if ($user->branch_id !== null) {
+                    if ((string)$stock->branch_id !== (string)$user->branch_id) {
+                        throw new AuthorizationException("You are not authorized to delete this stock.");
+                    }
+                } else {
+                    if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                        throw new AuthorizationException("You are not authorized to delete this stock.");
+                    }
                 }
             }
 
@@ -268,11 +285,14 @@ class StockService
         }
 
         if ($user->role !== 'admin') {
-            if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
-                throw new AuthorizationException("You are not authorized to view this stock.");
-            }
-            if ($user->branch_id !== null && (string)$stock->branch_id !== (string)$user->branch_id) {
-                throw new AuthorizationException("You are not authorized to view this stock.");
+            if ($user->branch_id !== null) {
+                if ((string)$stock->branch_id !== (string)$user->branch_id) {
+                    throw new AuthorizationException("You are not authorized to view this stock.");
+                }
+            } else {
+                if ((int)$stock->created_by !== (int)$user->getOwnerId()) {
+                    throw new AuthorizationException("You are not authorized to view this stock.");
+                }
             }
         }
 

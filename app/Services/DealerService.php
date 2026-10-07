@@ -21,13 +21,19 @@ class DealerService
         $this->dealerRepository = $dealerRepository;
     }
 
-    public function getDealersForUser($user, bool $activeOnly = false): Collection
+    public function getDealersForUser($user, bool $activeOnly = false, ?int $branchId = null, ?string $search = null): Collection
     {
-        if ($user->role === 'admin') {
-            return $this->dealerRepository->all($activeOnly);
+        $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
+
+        if ($effectiveBranchId) {
+            return $this->dealerRepository->findByBranch((int)$effectiveBranchId, $activeOnly, $search);
         }
 
-        return $this->dealerRepository->findForUser($user->getOwnerId(), $activeOnly);
+        if ($user->role === 'admin') {
+            return $this->dealerRepository->all($activeOnly, $search);
+        }
+
+        return $this->dealerRepository->findForUser($user->getOwnerId(), $activeOnly, $search);
     }
 
     public function getDealerDetails($user, int $id): Dealer
@@ -38,8 +44,16 @@ class DealerService
             throw new ModelNotFoundException('Dealer not found.');
         }
 
-        if ($user->role !== 'admin' && (int)$dealer->created_by !== (int)$user->getOwnerId()) {
-            throw new AuthorizationException('You are not authorized to view this dealer.');
+        if ($user->role !== 'admin') {
+            if ($user->branch_id !== null) {
+                if ((string)$dealer->branch_id !== (string)$user->branch_id) {
+                    throw new AuthorizationException('You are not authorized to view this dealer.');
+                }
+            } else {
+                if ((int)$dealer->created_by !== (int)$user->getOwnerId()) {
+                    throw new AuthorizationException('You are not authorized to view this dealer.');
+                }
+            }
         }
 
         return $dealer;
@@ -67,8 +81,16 @@ class DealerService
             throw new ModelNotFoundException('Dealer not found.');
         }
 
-        if ($user->role !== 'admin' && (int)$dealer->created_by !== (int)$user->getOwnerId()) {
-            throw new AuthorizationException('Only admins or the owner can update this dealer.');
+        if ($user->role !== 'admin') {
+            if ($user->branch_id !== null) {
+                if ((string)$dealer->branch_id !== (string)$user->branch_id) {
+                    throw new AuthorizationException('Only admins or the owner can update this dealer.');
+                }
+            } else {
+                if ((int)$dealer->created_by !== (int)$user->getOwnerId()) {
+                    throw new AuthorizationException('Only admins or the owner can update this dealer.');
+                }
+            }
         }
 
         return DB::transaction(function () use ($dealer, $data) {
@@ -84,8 +106,16 @@ class DealerService
             throw new ModelNotFoundException('Dealer not found.');
         }
 
-        if ($user->role !== 'admin' && (int)$dealer->created_by !== (int)$user->getOwnerId()) {
-            throw new AuthorizationException('Only admins or the owner can delete this dealer.');
+        if ($user->role !== 'admin') {
+            if ($user->branch_id !== null) {
+                if ((string)$dealer->branch_id !== (string)$user->branch_id) {
+                    throw new AuthorizationException('Only admins or the owner can delete this dealer.');
+                }
+            } else {
+                if ((int)$dealer->created_by !== (int)$user->getOwnerId()) {
+                    throw new AuthorizationException('Only admins or the owner can delete this dealer.');
+                }
+            }
         }
 
         DB::transaction(function () use ($dealer) {

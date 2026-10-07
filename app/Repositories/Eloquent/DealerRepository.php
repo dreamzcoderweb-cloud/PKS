@@ -8,20 +8,50 @@ use Illuminate\Database\Eloquent\Collection;
 
 class DealerRepository implements DealerRepositoryInterface
 {
-    public function all(bool $activeOnly = false): Collection
+    public function all(bool $activeOnly = false, ?string $search = null): Collection
     {
         $query = Dealer::with(['branch', 'user']);
         if ($activeOnly) {
             $query->active();
         }
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('business_name', 'like', "%{$search}%")
+                  ->orWhere('dealer_code', 'like', "%{$search}%");
+            });
+        }
         return $query->latest()->get();
     }
 
-    public function findForUser(int $userId, bool $activeOnly = false): Collection
+    public function findForUser(int $userId, bool $activeOnly = false, ?string $search = null): Collection
     {
         $query = Dealer::with(['branch', 'user'])->where('created_by', $userId);
         if ($activeOnly) {
             $query->active();
+        }
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('business_name', 'like', "%{$search}%")
+                  ->orWhere('dealer_code', 'like', "%{$search}%");
+            });
+        }
+        return $query->latest()->get();
+    }
+
+    public function findByBranch(int $branchId, bool $activeOnly = false, ?string $search = null): Collection
+    {
+        $query = Dealer::with(['branch', 'user'])->where('branch_id', $branchId);
+        if ($activeOnly) {
+            $query->active();
+        }
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('business_name', 'like', "%{$search}%")
+                  ->orWhere('dealer_code', 'like', "%{$search}%");
+            });
         }
         return $query->latest()->get();
     }
