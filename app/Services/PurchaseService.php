@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PurchaseService
 {
@@ -33,7 +34,7 @@ class PurchaseService
     /**
      * Retrieve all purchases depending on user role.
      */
-    public function getPurchasesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
+    public function getPurchasesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $dealer = null): Collection
     {
         $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
 
@@ -41,7 +42,7 @@ class PurchaseService
             ? $this->purchaseRepository->all()
             : $this->purchaseRepository->findForUser($user->getOwnerId());
 
-        return $this->applyFilters($query, $from, $to, $effectiveBranchId);
+        return $this->applyFilters($query, $from, $to, $effectiveBranchId, $dealer);
     }
 
     /**
@@ -231,7 +232,7 @@ class PurchaseService
         return (string) ($lastCode + 1);
     }
 
-    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null): Collection
+    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $dealer = null): Collection
     {
         $filtered = $query;
 
@@ -261,7 +262,123 @@ class PurchaseService
             });
         }
 
+        if ($dealer !== null && trim($dealer) !== '') {
+            $dealerTerm = strtolower(trim($dealer));
+            $filtered = $filtered->filter(function ($item) use ($dealerTerm) {
+                $dealerName = strtolower($item->dealer?->name ?? '');
+                return str_contains($dealerName, $dealerTerm);
+            });
+        }
+
         return $filtered->values();
+    }
+
+    /**
+     * Prepare structured purchase report data.
+     */
+    public function getPurchaseReportData($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $dealer = null): array
+    {
+        $purchases = $this->getPurchasesForUser($user, $from, $to, $branchId, $dealer);
+
+        $items = [];
+        $totalPurchasesCount = $purchases->count();
+        $totalUnitQuantity = 0.0;
+        $totalAlterQuantity = 0.0;
+        $totalAmount = 0.0;
+
+        foreach ($purchases as $purchase) {
+            $date = $purchase->created_at ? $purchase->created_at->format('d-m-Y') : '-';
+            $dealerName = $purchase->dealer?->name ?? '-';
+            $vehicleNumber = $purchase->vehicle?->name ?? $purchase->vehicle?->vehicle_number ?? '-';
+            $transporterName = $purchase->transporter?->name ?? '-';
+
+            if ($purchase->details && $purchase->details->isNotEmpty()) {
+                foreach ($purchase->details as $detail) {
+                    $unitVal = $detail->unit_value !== null ? (float) $detail->unit_value : null;
+                    $alterVal = $detail->alter_unit_value !== null ? (float) $detail->alter_unit_value : null;
+                    $rate = $detail->rate !== null ? (float) $detail->rate : null;
+                    $itemTotal = ($unitVal !== null && $rate !== null) ? round($unitVal * $rate, 2) : 0.0;
+
+                    $totalUnitQuantity += ($unitVal ?? 0);
+                    $totalAlterQuantity += ($alterVal ?? 0);
+                    $totalAmount += $itemTotal;
+
+                    $items[] = [
+                        'purchase_id' => $purchase->id,
+                        'date' => $date,
+                        'dealer_name' => $dealerName,
+                        'vehicle' => $vehicleNumber,
+                        'transporter' => $transporterName,
+                        'brand' => $detail->brand_name ?? '-',
+                        'stock' => $detail->stock_name ?? '-',
+                        'lot_no' => $detail->lot_number ?? $purchase->lot_number ?? '-',
+                        'unit_qty' => $unitVal,
+                        'unit_name' => $detail->unit_type ?? '',
+                        'alter_qty' => $alterVal,
+                        'alter_unit_name' => $detail->alter_unit_type ?? '',
+                        'rate' => $rate,
+                        'total_amount' => $itemTotal,
+                    ];
+                }
+            } else {
+                $items[] = [
+                    'purchase_id' => $purchase->id,
+                    'date' => $date,
+                    'dealer_name' => $dealerName,
+                    'vehicle' => $vehicleNumber,
+                    'transporter' => $transporterName,
+                    'brand' => '-',
+                    'stock' => '-',
+                    'lot_no' => $purchase->lot_number ?? '-',
+                    'unit_qty' => null,
+                    'unit_name' => '',
+                    'alter_qty' => null,
+                    'alter_unit_name' => '',
+                    'rate' => null,
+                    'total_amount' => 0.0,
+                ];
+            }
+        }
+
+        $branchName = null;
+        if ($user && $user->branch) {
+            $branchName = $user->branch->name;
+        } elseif ($purchases->isNotEmpty() && $purchases->first()->branch) {
+            $branchName = $purchases->first()->branch->name;
+        }
+
+        return [
+            'items' => $items,
+            'total_purchases' => $totalPurchasesCount,
+            'total_items' => count($items),
+            'total_unit_qty' => $totalUnitQuantity,
+            'total_alter_qty' => $totalAlterQuantity,
+            'total_amount' => round($totalAmount, 2),
+            'filters' => [
+                'from' => $from,
+                'to' => $to,
+                'branch_id' => $branchId,
+                'branch_name' => $branchName,
+                'dealer_name' => $dealer,
+            ],
+            'meta' => [
+                'generated_at' => now()->format('d-m-Y h:i A'),
+                'generated_by' => $user->name ?? $user->username ?? 'User',
+            ],
+        ];
+    }
+
+    /**
+     * Generate Purchase Report PDF.
+     *
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function generatePurchaseReportPdf($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $dealer = null)
+    {
+        $reportData = $this->getPurchaseReportData($user, $from, $to, $branchId, $dealer);
+
+        return Pdf::loadView('pdf.purchase_report', ['data' => (object) $reportData])
+            ->setPaper('a4', 'landscape');
     }
 
     protected function parseDate(string $date): ?\Carbon\Carbon

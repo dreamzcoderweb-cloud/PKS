@@ -27,9 +27,40 @@ class UserPurchaseController extends Controller
             $request->user(),
             $request->query('from'),
             $request->query('to'),
-            $request->query('branch_id')
+            $request->query('branch_id'),
+            $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
         );
         return $this->successResponse('Purchases retrieved successfully.', PurchaseResource::collection($purchases));
+    }
+
+    public function generatePurchaseReportPdf(Request $request)
+    {
+        if ($request->query('format') === 'json') {
+            $data = $this->purchaseService->getPurchaseReportData(
+                $request->user(),
+                $request->query('from'),
+                $request->query('to'),
+                $request->query('branch_id'),
+                $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
+            );
+            return $this->successResponse('Purchase report retrieved successfully.', $data);
+        }
+
+        $pdf = $this->purchaseService->generatePurchaseReportPdf(
+            $request->user(),
+            $request->query('from'),
+            $request->query('to'),
+            $request->query('branch_id'),
+            $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
+        );
+
+        $filename = 'purchase-report-' . now()->format('d-m-Y') . '.pdf';
+
+        if ($request->boolean('stream')) {
+            return $pdf->stream($filename);
+        }
+
+        return $pdf->download($filename);
     }
 
     public function store(StorePurchaseRequest $request): JsonResponse
