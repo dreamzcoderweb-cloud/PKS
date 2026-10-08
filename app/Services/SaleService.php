@@ -32,7 +32,7 @@ class SaleService
     /**
      * Retrieve all sales depending on user role.
      */
-    public function getSalesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null): Collection
+    public function getSalesForUser($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null, ?string $dealer = null): Collection
     {
         $effectiveBranchId = $user->role === 'admin' ? $branchId : ($user->branch_id ?? $branchId);
 
@@ -40,7 +40,7 @@ class SaleService
             ? $this->saleRepository->all()
             : $this->saleRepository->findForUser($user->getOwnerId());
 
-        return $this->applyFilters($query, $from, $to, $effectiveBranchId, $saletype);
+        return $this->applyFilters($query, $from, $to, $effectiveBranchId, $saletype, $dealer);
     }
 
     /**
@@ -443,7 +443,7 @@ class SaleService
         });
     }
 
-    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null): Collection
+    protected function applyFilters(Collection $query, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null, ?string $dealer = null): Collection
     {
         $filtered = $query;
 
@@ -497,6 +497,14 @@ class SaleService
             }
         }
 
+        if ($dealer !== null && trim($dealer) !== '') {
+            $dealerTerm = strtolower(trim($dealer));
+            $filtered = $filtered->filter(function ($item) use ($dealerTerm) {
+                $dealerName = strtolower($item->dealer?->name ?? '');
+                return str_contains($dealerName, $dealerTerm);
+            });
+        }
+
         return $filtered->values();
     }
 
@@ -543,6 +551,113 @@ class SaleService
         $gatepass->details = $sale->details;
 
         return Pdf::loadView('pdf.gatepass', ['gatepass' => $gatepass]);
+    }
+
+    /**
+     * Prepare structured sales report data.
+     */
+    public function getSalesReportData($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null, ?string $dealer = null): array
+    {
+        $sales = $this->getSalesForUser($user, $from, $to, $branchId, $saletype, $dealer);
+
+        $items = [];
+        $totalSalesCount = $sales->count();
+        $totalQuantity = 0.0;
+        $totalAmount = 0.0;
+
+        foreach ($sales as $sale) {
+            $date = $sale->sale_date
+                ? $sale->sale_date->format('d-m-Y')
+                : ($sale->created_at ? $sale->created_at->format('d-m-Y') : '-');
+
+            $saleTypeText = Sale::getSaleTypeText($sale->saletype);
+            $dealerName = $sale->dealer?->name ?? '-';
+            $vehicleNumber = $sale->vehicle?->name ?? $sale->vehicle?->vehicle_number ?? '-';
+            $invoiceNo = $sale->invoice_number ?? '-';
+
+            if ($sale->details && $sale->details->isNotEmpty()) {
+                foreach ($sale->details as $detail) {
+                    $unitVal = $detail->unit_value !== null ? (float) $detail->unit_value : null;
+                    $rate = $detail->rate !== null ? (float) $detail->rate : null;
+                    $itemTotal = ($unitVal !== null && $rate !== null) ? round($unitVal * $rate, 2) : 0.0;
+
+                    $totalQuantity += ($unitVal ?? 0);
+                    $totalAmount += $itemTotal;
+
+                    $items[] = [
+                        'sale_id' => $sale->id,
+                        'date' => $date,
+                        'sales_type' => $saleTypeText,
+                        'dealer_name' => $dealerName,
+                        'vehicle' => $vehicleNumber,
+                        'invoice_no' => $invoiceNo,
+                        'brand' => $detail->stock?->brand_name ?? '-',
+                        'stock' => $detail->stock?->stock_name ?? '-',
+                        'lot_no' => $detail->lot_number ?? $detail->stock?->lott_number ?? '-',
+                        'unit_qty' => $unitVal,
+                        'unit_name' => $detail->unit?->unit ?? '',
+                        'rate' => $rate,
+                        'total_amount' => $itemTotal,
+                    ];
+                }
+            } else {
+                $items[] = [
+                    'sale_id' => $sale->id,
+                    'date' => $date,
+                    'sales_type' => $saleTypeText,
+                    'dealer_name' => $dealerName,
+                    'vehicle' => $vehicleNumber,
+                    'invoice_no' => $invoiceNo,
+                    'brand' => '-',
+                    'stock' => '-',
+                    'lot_no' => '-',
+                    'unit_qty' => null,
+                    'unit_name' => '',
+                    'rate' => null,
+                    'total_amount' => 0.0,
+                ];
+            }
+        }
+
+        $branchName = null;
+        if ($user && $user->branch) {
+            $branchName = $user->branch->name;
+        } elseif ($sales->isNotEmpty() && $sales->first()->branch) {
+            $branchName = $sales->first()->branch->name;
+        }
+
+        return [
+            'items' => $items,
+            'total_sales' => $totalSalesCount,
+            'total_items' => count($items),
+            'total_qty' => $totalQuantity,
+            'total_amount' => round($totalAmount, 2),
+            'filters' => [
+                'from' => $from,
+                'to' => $to,
+                'branch_id' => $branchId,
+                'branch_name' => $branchName,
+                'sales_type' => $saletype ? Sale::getSaleTypeText(Sale::parseSaleType($saletype)) : null,
+                'dealer_name' => $dealer,
+            ],
+            'meta' => [
+                'generated_at' => now()->format('d-m-Y h:i A'),
+                'generated_by' => $user->name ?? $user->username ?? 'User',
+            ],
+        ];
+    }
+
+    /**
+     * Generate Sales Report PDF.
+     *
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    public function generateSalesReportPdf($user, ?string $from = null, ?string $to = null, ?string $branchId = null, ?string $saletype = null, ?string $dealer = null)
+    {
+        $reportData = $this->getSalesReportData($user, $from, $to, $branchId, $saletype, $dealer);
+
+        return Pdf::loadView('pdf.sales_report', ['data' => (object) $reportData])
+            ->setPaper('a4', 'landscape');
     }
 
     protected function resolveDealerId($user, $branchId, array $data): int

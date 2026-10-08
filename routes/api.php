@@ -62,24 +62,10 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('dealers', AdminDealerController::class);
         Route::apiResource('purchases', AdminPurchaseController::class);
         Route::post('purchases/{purchase}', [AdminPurchaseController::class, 'update']);
+        Route::get('sales-report/pdf', [AdminSaleController::class, 'generateSalesReportPdf']);
         Route::apiResource('sales', AdminSaleController::class);
         Route::post('sales/{sale}', [AdminSaleController::class, 'update']);
         Route::get('sales/{sale}/pdf', [AdminSaleController::class, 'generatePdf']);
-
-        // Admin Mobile App (mob) Routes
-        Route::prefix('mob')->group(function () {
-            Route::apiResource('purchases', AdminMobPurchaseController::class);
-            Route::post('purchases/{purchase}', [AdminMobPurchaseController::class, 'update']);
-            Route::apiResource('sales', AdminMobSaleController::class);
-            Route::post('sales/{sale}', [AdminMobSaleController::class, 'update']);
-            Route::get('sales/{sale}/pdf', [AdminMobSaleController::class, 'generatePdf']);
-            Route::get('gatepasses/{sale}/pdf', [AdminMobSaleController::class, 'generatePdf']);
-            Route::get('stocks/{stock}/buy-details', [AdminStockController::class, 'getBuyDetails']);
-            Route::get('stocks/{stock}/sale-details', [AdminStockController::class, 'getSaleDetails']);
-            Route::get('stocks/{stock}/details', [AdminStockController::class, 'getBuyDetails']);
-            Route::get('stocks/{stock}/pdf', [AdminStockController::class, 'generateBuyDetailsPdf']);
-            Route::get('stocks/{stock}/sale-pdf', [AdminStockController::class, 'generateSaleDetailsPdf']);
-        });
     });
 });
 
@@ -110,18 +96,9 @@ Route::prefix('user')->group(function () {
         Route::apiResource('alternate-units', UserAlternateUnitController::class);
         Route::apiResource('dealers', UserDealerController::class);
         Route::apiResource('purchases', UserPurchaseController::class)->except(['update']);
+        Route::get('sales-report/pdf', [UserSaleController::class, 'generateSalesReportPdf']);
         Route::apiResource('sales', UserSaleController::class)->except(['update']);
         Route::get('gatepasses/{sale}/pdf', [UserSaleController::class, 'generatePdf']);
 
-        // User Mobile App (mob) Routes
-        Route::prefix('mob')->group(function () {
-            Route::apiResource('purchases', UserMobPurchaseController::class)->except(['update']);
-            Route::apiResource('sales', UserMobSaleController::class)->except(['update']);
-            Route::get('gatepasses/{sale}/pdf', [UserMobSaleController::class, 'generatePdf']);
-            Route::get('stocks/{stock}/buy-details', [UserStockController::class, 'getBuyDetails']);
-            Route::get('stocks/{stock}/details', [UserStockController::class, 'getBuyDetails']);
-            Route::get('stocks/{stock}/pdf', [UserStockController::class, 'generateBuyDetailsPdf']);
-            Route::get('stocks/{stock}/sale-pdf', [UserStockController::class, 'generateSaleDetailsPdf']);
-        });
     });
 });

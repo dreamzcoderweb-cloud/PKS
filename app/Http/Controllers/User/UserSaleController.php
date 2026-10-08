@@ -28,9 +28,42 @@ class UserSaleController extends Controller
             $request->query('from'),
             $request->query('to'),
             $request->query('branch_id'),
-            $request->query('saletype') ?? $request->query('sale_type')
+            $request->query('saletype') ?? $request->query('sale_type'),
+            $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
         );
         return $this->successResponse('Sales retrieved successfully.', SaleResource::collection($sales));
+    }
+
+    public function generateSalesReportPdf(Request $request)
+    {
+        if ($request->query('format') === 'json') {
+            $data = $this->saleService->getSalesReportData(
+                $request->user(),
+                $request->query('from_date'),
+                $request->query('to_date'),
+                $request->query('branch_id'),
+                $request->query('saletype') ?? $request->query('sale_type'),
+                $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
+            );
+            return $this->successResponse('Sales report retrieved successfully.', $data);
+        }
+
+        $pdf = $this->saleService->generateSalesReportPdf(
+            $request->user(),
+            $request->query('from_date'),
+            $request->query('to_date'),
+            $request->query('branch_id'),
+            $request->query('saletype') ?? $request->query('sale_type'),
+            $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
+        );
+
+        $filename = 'sales-report-' . now()->format('d-m-Y') . '.pdf';
+
+        if ($request->boolean('stream')) {
+            return $pdf->stream($filename);
+        }
+
+        return $pdf->download($filename);
     }
 
     public function store(StoreSaleRequest $request): JsonResponse
