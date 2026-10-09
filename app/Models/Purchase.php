@@ -17,12 +17,14 @@ class Purchase extends Model
         'transporter_id',
         'vehicle_id',
         'driver_number',
+        'purchase_date',
         'purchase_images',
         'created_by',
     ];
 
     protected $casts = [
         'purchase_images' => 'array',
+        'purchase_date' => 'datetime',
     ];
 
     public function branch()

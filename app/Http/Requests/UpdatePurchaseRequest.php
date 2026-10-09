@@ -15,6 +15,16 @@ class UpdatePurchaseRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('date') && !$this->has('purchase_date')) {
+            $this->merge(['purchase_date' => $this->input('date')]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
@@ -22,6 +32,8 @@ class UpdatePurchaseRequest extends FormRequest
         $isAdmin = $this->is('api/admin/*') || $this->is('admin/*');
 
         return [
+            'purchase_date' => 'nullable|date',
+            'date' => 'nullable|date',
             'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'dealer_id' => 'required_without:dealer_name|nullable|exists:dealers,id',
             'dealer_name' => 'required_without:dealer_id|nullable|string|max:255',
@@ -31,8 +43,7 @@ class UpdatePurchaseRequest extends FormRequest
             'vehicle_number' => 'required_without:vehicle_id|nullable|string|max:255',
             'driver_number' => 'required|string|max:255',
             'purchase_images' => 'nullable|array|max:3',
-            'purchase_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'details' => 'required|array|min:1',
+            'details' => 'nullable|array',
             'details.*.brand_name' => 'required|string|max:255',
             'details.*.stock_name' => 'required|string|max:255',
             'details.*.lot_number' => 'required|string|max:255',

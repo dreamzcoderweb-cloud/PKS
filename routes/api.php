@@ -59,6 +59,7 @@ Route::prefix('admin')->group(function () {
         Route::apiResource('transporters', AdminTransporterController::class);
         Route::apiResource('units', AdminUnitController::class);
         Route::apiResource('alternate-units', AdminAlternateUnitController::class);
+        Route::get('purchases-report/pdf', [AdminPurchaseController::class, 'generatePurchaseReportPdf']);
         Route::get('purchase-report/pdf', [AdminPurchaseController::class, 'generatePurchaseReportPdf']);
         Route::apiResource('purchases', AdminPurchaseController::class);
         Route::post('purchases/{purchase}', [AdminPurchaseController::class, 'update']);
@@ -95,6 +96,7 @@ Route::prefix('user')->group(function () {
         Route::apiResource('units', UserUnitController::class);
         Route::apiResource('alternate-units', UserAlternateUnitController::class);
         Route::apiResource('dealers', UserDealerController::class);
+        Route::get('purchases-report/pdf', [UserPurchaseController::class, 'generatePurchaseReportPdf']);
         Route::get('purchase-report/pdf', [UserPurchaseController::class, 'generatePurchaseReportPdf']);
         Route::apiResource('purchases', UserPurchaseController::class)->except(['update']);
         Route::get('sales-report/pdf', [UserSaleController::class, 'generateSalesReportPdf']);

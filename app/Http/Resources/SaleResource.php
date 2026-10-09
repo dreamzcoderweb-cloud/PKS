@@ -29,6 +29,7 @@ class SaleResource extends JsonResource
             'driver_name' => $this->driver_name,
             'driver_number' => $this->driver_number,
             'sale_date' => $this->sale_date?->toIso8601String(),
+            'date' => $this->sale_date ? $this->sale_date->format('d-m-Y') : ($this->created_at ? $this->created_at->format('d-m-Y') : null),
             'sale_images' => array_map(function ($image) {
                 return filter_var($image, FILTER_VALIDATE_URL) ? $image : asset($image);
             }, $this->sale_images ?? []),

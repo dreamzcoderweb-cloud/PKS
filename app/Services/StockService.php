@@ -231,14 +231,21 @@ class StockService
 
     protected function parseDate(string $date): ?\Carbon\Carbon
     {
+        $date = trim($date);
+        $tz = config('app.timezone', 'Asia/Kolkata');
+
+        $formats = ['d-m-Y H:i:s', 'd-m-Y H:i', 'd/m/Y H:i:s', 'd/m/Y H:i', 'Y-m-d H:i:s', 'Y-m-d H:i', 'd-m-Y', 'd/m/Y', 'Y-m-d'];
+        foreach ($formats as $fmt) {
+            try {
+                $dt = \Carbon\Carbon::createFromFormat($fmt, $date, $tz);
+                if ($dt !== false) {
+                    return $dt;
+                }
+            } catch (\Throwable $e) {
+            }
+        }
         try {
-            if (str_contains($date, '/')) {
-                return \Carbon\Carbon::createFromFormat('d/m/Y', $date);
-            }
-            if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date)) {
-                return \Carbon\Carbon::createFromFormat('d-m-Y', $date);
-            }
-            return \Carbon\Carbon::parse($date);
+            return \Carbon\Carbon::parse($date, $tz);
         } catch (\Throwable $e) {
             return null;
         }

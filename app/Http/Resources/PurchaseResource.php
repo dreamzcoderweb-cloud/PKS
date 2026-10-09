@@ -31,6 +31,8 @@ class PurchaseResource extends JsonResource
             'created_by' => $this->created_by,
             'user' => new UserResource($this->whenLoaded('user')),
             'details' => PurchaseDetailResource::collection($this->whenLoaded('details')),
+            'purchase_date' => $this->purchase_date?->toIso8601String() ?? $this->created_at?->toIso8601String(),
+            'date' => $this->purchase_date ? $this->purchase_date->format('d-m-Y') : ($this->created_at ? $this->created_at->format('d-m-Y') : null),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

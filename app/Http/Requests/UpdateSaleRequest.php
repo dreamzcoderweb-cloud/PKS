@@ -22,6 +22,9 @@ class UpdateSaleRequest extends FormRequest
         if ($this->has('sale_type') && !$this->has('saletype')) {
             $this->merge(['saletype' => $this->input('sale_type')]);
         }
+        if ($this->has('date') && !$this->has('sale_date')) {
+            $this->merge(['sale_date' => $this->input('date')]);
+        }
     }
 
     /**
@@ -41,7 +44,8 @@ class UpdateSaleRequest extends FormRequest
             'invoice_number' => 'required|string|max:255',
             'driver_name' => 'required|string|max:255',
             'driver_number' => 'required|string|max:255',
-            'sale_date' => 'required|date',
+            'sale_date' => 'required_without:date|nullable|date',
+            'date' => 'nullable|date',
             'sale_images' => 'nullable|array|max:3',
             'sale_images.*' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             'details' => 'required|array|min:1',

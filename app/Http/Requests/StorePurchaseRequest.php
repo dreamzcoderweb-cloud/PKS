@@ -15,6 +15,16 @@ class StorePurchaseRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('date') && !$this->has('purchase_date')) {
+            $this->merge(['purchase_date' => $this->input('date')]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      */
     public function rules(): array
@@ -22,6 +32,8 @@ class StorePurchaseRequest extends FormRequest
         $isAdmin = $this->is('api/admin/*') || $this->is('admin/*');
 
         return [
+            'purchase_date' => 'nullable|date',
+            'date' => 'nullable|date',
             'branch_id' => ($isAdmin ? 'required' : 'nullable') . '|exists:branches,branch_id',
             'dealer_id' => 'required_without:dealer_name|nullable|exists:dealers,id',
             'dealer_name' => 'required_without:dealer_id|nullable|string|max:255',

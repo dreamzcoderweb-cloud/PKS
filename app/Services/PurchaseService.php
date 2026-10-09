@@ -97,6 +97,10 @@ class PurchaseService
                 }
             }
 
+            $purchaseDate = isset($data['purchase_date']) || isset($data['date'])
+                ? $this->parseDate($data['purchase_date'] ?? $data['date'])
+                : now();
+
             $purchaseData = [
                 'purchase_id' => (string) Str::uuid(),
                 'branch_id' => $data['branch_id'],
@@ -105,6 +109,7 @@ class PurchaseService
                 'transporter_id' => $data['transporter_id'],
                 'vehicle_id' => $vehicleId,
                 'driver_number' => $data['driver_number'],
+                'purchase_date' => $purchaseDate ? $purchaseDate->format('Y-m-d H:i:s') : now(),
                 'purchase_images' => $storedImages,
                 'created_by' => $user->getOwnerId(),
             ];
@@ -175,7 +180,11 @@ class PurchaseService
         $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
         $vehicleId = $this->resolveVehicleId($data['vehicle_id'] ?? null, $data['vehicle_number'] ?? null);
 
-        return DB::transaction(function () use ($purchase, $data, $dealerId, $vehicleId) {
+            $existingPurchaseDate = $purchase->purchase_date ? \Carbon\Carbon::parse($purchase->purchase_date) : ($purchase->created_at ? \Carbon\Carbon::parse($purchase->created_at) : null);
+            $purchaseDate = isset($data['purchase_date']) || isset($data['date'])
+                ? $this->parseDate($data['purchase_date'] ?? $data['date'], $existingPurchaseDate)
+                : null;
+
             $purchaseData = [
                 'branch_id' => $data['branch_id'],
                 'dealer_id' => $dealerId,
@@ -184,6 +193,10 @@ class PurchaseService
                 'vehicle_id' => $vehicleId,
                 'driver_number' => $data['driver_number'],
             ];
+
+            if ($purchaseDate) {
+                $purchaseData['purchase_date'] = $purchaseDate->format('Y-m-d H:i:s');
+            }
 
             // Handle images update if provided
             if (isset($data['purchase_images'])) {
@@ -241,7 +254,8 @@ class PurchaseService
             if ($fromDate) {
                 $fromDate = $fromDate->startOfDay();
                 $filtered = $filtered->filter(function ($item) use ($fromDate) {
-                    return $item->created_at && \Carbon\Carbon::parse($item->created_at)->gte($fromDate);
+                    $itemDate = $item->purchase_date ?? $item->created_at;
+                    return $itemDate && \Carbon\Carbon::parse($itemDate)->gte($fromDate);
                 });
             }
         }
@@ -251,7 +265,8 @@ class PurchaseService
             if ($toDate) {
                 $toDate = $toDate->endOfDay();
                 $filtered = $filtered->filter(function ($item) use ($toDate) {
-                    return $item->created_at && \Carbon\Carbon::parse($item->created_at)->lte($toDate);
+                    $itemDate = $item->purchase_date ?? $item->created_at;
+                    return $itemDate && \Carbon\Carbon::parse($itemDate)->lte($toDate);
                 });
             }
         }
@@ -287,7 +302,9 @@ class PurchaseService
         $totalAmount = 0.0;
 
         foreach ($purchases as $purchase) {
-            $date = $purchase->created_at ? $purchase->created_at->format('d-m-Y') : '-';
+            $date = $purchase->purchase_date
+                ? $purchase->purchase_date->format('d-m-Y')
+                : ($purchase->created_at ? $purchase->created_at->format('d-m-Y') : '-');
             $dealerName = $purchase->dealer?->name ?? '-';
             $vehicleNumber = $purchase->vehicle?->name ?? $purchase->vehicle?->vehicle_number ?? '-';
             $transporterName = $purchase->transporter?->name ?? '-';
@@ -323,7 +340,9 @@ class PurchaseService
             } else {
                 $items[] = [
                     'purchase_id' => $purchase->id,
-                    'date' => $date,
+                    'date' => $purchase->purchase_date
+                        ? $purchase->purchase_date->format('d-m-Y')
+                        : ($purchase->created_at ? $purchase->created_at->format('d-m-Y') : '-'),
                     'dealer_name' => $dealerName,
                     'vehicle' => $vehicleNumber,
                     'transporter' => $transporterName,
@@ -381,18 +400,71 @@ class PurchaseService
             ->setPaper('a4', 'landscape');
     }
 
-    protected function parseDate(string $date): ?\Carbon\Carbon
+    protected function parseDate(string $date, ?\Carbon\Carbon $preserveTimeFrom = null): ?\Carbon\Carbon
     {
-        try {
-            if (str_contains($date, '/')) {
-                return \Carbon\Carbon::createFromFormat('d/m/Y', $date);
+        $date = trim($date);
+        $tz = config('app.timezone', 'Asia/Kolkata');
+
+        $hasTime = (bool) preg_match('/\d{1,2}:\d{2}/', $date);
+
+        $formatsWithTime = [
+            'd-m-Y H:i:s',
+            'd-m-Y H:i',
+            'd/m/Y H:i:s',
+            'd/m/Y H:i',
+            'Y-m-d H:i:s',
+            'Y-m-d H:i',
+        ];
+
+        $formatsDateOnly = [
+            'd-m-Y',
+            'd/m/Y',
+            'Y-m-d',
+        ];
+
+        if ($hasTime) {
+            foreach ($formatsWithTime as $fmt) {
+                try {
+                    $dt = \Carbon\Carbon::createFromFormat($fmt, $date, $tz);
+                    if ($dt !== false) {
+                        return $dt;
+                    }
+                } catch (\Throwable $e) {
+                }
             }
-            if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date)) {
-                return \Carbon\Carbon::createFromFormat('d-m-Y', $date);
+            try {
+                return \Carbon\Carbon::parse($date, $tz);
+            } catch (\Throwable $e) {
+                return null;
             }
-            return \Carbon\Carbon::parse($date);
-        } catch (\Throwable $e) {
-            return null;
+        } else {
+            foreach ($formatsDateOnly as $fmt) {
+                try {
+                    $dt = \Carbon\Carbon::createFromFormat($fmt, $date, $tz);
+                    if ($dt !== false) {
+                        if ($preserveTimeFrom) {
+                            $dt->setTime($preserveTimeFrom->hour, $preserveTimeFrom->minute, $preserveTimeFrom->second);
+                        } else {
+                            $now = \Carbon\Carbon::now($tz);
+                            $dt->setTime($now->hour, $now->minute, $now->second);
+                        }
+                        return $dt;
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+            try {
+                $dt = \Carbon\Carbon::parse($date, $tz);
+                if ($preserveTimeFrom) {
+                    $dt->setTime($preserveTimeFrom->hour, $preserveTimeFrom->minute, $preserveTimeFrom->second);
+                } else {
+                    $now = \Carbon\Carbon::now($tz);
+                    $dt->setTime($now->hour, $now->minute, $now->second);
+                }
+                return $dt;
+            } catch (\Throwable $e) {
+                return null;
+            }
         }
     }
 
