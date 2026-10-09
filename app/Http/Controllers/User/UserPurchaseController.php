@@ -23,35 +23,45 @@ class UserPurchaseController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $from = $request->input('from_date') ?? $request->input('from') ?? $request->input('start_date');
+        $to = $request->input('to_date') ?? $request->input('to') ?? $request->input('end_date');
+        $branchId = $request->input('branch_id');
+        $dealer = $request->input('dealer_name') ?? $request->input('dealer') ?? $request->input('search');
+
         $purchases = $this->purchaseService->getPurchasesForUser(
             $request->user(),
-            $request->query('from'),
-            $request->query('to'),
-            $request->query('branch_id'),
-            $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
+            $from,
+            $to,
+            $branchId,
+            $dealer
         );
         return $this->successResponse('Purchases retrieved successfully.', PurchaseResource::collection($purchases));
     }
 
     public function generatePurchaseReportPdf(Request $request)
     {
+        $from = $request->input('from_date') ?? $request->input('from') ?? $request->input('start_date');
+        $to = $request->input('to_date') ?? $request->input('to') ?? $request->input('end_date');
+        $branchId = $request->input('branch_id');
+        $dealer = $request->input('dealer_name') ?? $request->input('dealer') ?? $request->input('search');
+
         if ($request->query('format') === 'json') {
             $data = $this->purchaseService->getPurchaseReportData(
                 $request->user(),
-                $request->query('from'),
-                $request->query('to'),
-                $request->query('branch_id'),
-                $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
+                $from,
+                $to,
+                $branchId,
+                $dealer
             );
             return $this->successResponse('Purchase report retrieved successfully.', $data);
         }
 
         $pdf = $this->purchaseService->generatePurchaseReportPdf(
             $request->user(),
-            $request->query('from'),
-            $request->query('to'),
-            $request->query('branch_id'),
-            $request->query('dealer_name') ?? $request->query('dealer') ?? $request->query('search')
+            $from,
+            $to,
+            $branchId,
+            $dealer
         );
 
         $filename = 'purchase-report-' . now()->format('d-m-Y') . '.pdf';

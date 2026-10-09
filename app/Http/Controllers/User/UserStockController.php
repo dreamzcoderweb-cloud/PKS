@@ -29,19 +29,23 @@ class UserStockController extends Controller
     public function index(Request $request): JsonResponse
     {
         $brandName = $request->query('brand_name') ?? $request->query('brand');
+        $from = $request->input('from_date') ?? $request->input('from') ?? $request->input('start_date');
+        $to = $request->input('to_date') ?? $request->input('to') ?? $request->input('end_date');
+        $branchId = $request->input('branch_id');
+
         $stocks = $this->stockService->getStocksForUser(
             $request->user(),
             $brandName,
-            $request->query('from'),
-            $request->query('to'),
-            $request->query('branch_id')
+            $from,
+            $to,
+            $branchId
         );
         $purchaseStocks = $this->stockService->getPurchaseStocksForUser(
             $request->user(),
             $brandName,
-            $request->query('from'),
-            $request->query('to'),
-            $request->query('branch_id')
+            $from,
+            $to,
+            $branchId
         );
         // Merge both collections and remove duplicates
         $mergedStocks = $stocks->concat($purchaseStocks)->unique('id')->values();

@@ -180,6 +180,7 @@ class PurchaseService
         $dealerId = $this->resolveDealerId($user, $data['branch_id'], $data);
         $vehicleId = $this->resolveVehicleId($data['vehicle_id'] ?? null, $data['vehicle_number'] ?? null);
 
+        return DB::transaction(function () use ($purchase, $data, $dealerId, $vehicleId) {
             $existingPurchaseDate = $purchase->purchase_date ? \Carbon\Carbon::parse($purchase->purchase_date) : ($purchase->created_at ? \Carbon\Carbon::parse($purchase->created_at) : null);
             $purchaseDate = isset($data['purchase_date']) || isset($data['date'])
                 ? $this->parseDate($data['purchase_date'] ?? $data['date'], $existingPurchaseDate)
@@ -285,7 +286,10 @@ class PurchaseService
             });
         }
 
-        return $filtered->values();
+        return $filtered->sortByDesc(function ($item) {
+            $dt = $item->purchase_date ?? $item->created_at;
+            return $dt ? \Carbon\Carbon::parse($dt)->timestamp : 0;
+        })->values();
     }
 
     /**

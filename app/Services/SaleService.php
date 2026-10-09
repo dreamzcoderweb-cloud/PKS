@@ -515,7 +515,10 @@ class SaleService
             });
         }
 
-        return $filtered->values();
+        return $filtered->sortByDesc(function ($item) {
+            $dt = $item->sale_date ?? $item->created_at;
+            return $dt ? \Carbon\Carbon::parse($dt)->timestamp : 0;
+        })->values();
     }
 
     protected function parseDate(string $date, ?\Carbon\Carbon $preserveTimeFrom = null): ?\Carbon\Carbon

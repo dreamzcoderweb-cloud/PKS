@@ -10,14 +10,16 @@ class PurchaseRepository implements PurchaseRepositoryInterface
 {
     public function all(): Collection
     {
-        return Purchase::with(['branch', 'dealer', 'transporter', 'vehicle', 'user', 'details'])->latest()->get();
+        return Purchase::with(['branch', 'dealer', 'transporter', 'vehicle', 'user', 'details'])
+            ->orderByRaw('COALESCE(purchase_date, created_at) DESC')
+            ->get();
     }
 
     public function findForUser(int $userId): Collection
     {
         return Purchase::with(['branch', 'dealer', 'transporter', 'vehicle', 'user', 'details'])
             ->where('created_by', $userId)
-            ->latest()
+            ->orderByRaw('COALESCE(purchase_date, created_at) DESC')
             ->get();
     }
 
