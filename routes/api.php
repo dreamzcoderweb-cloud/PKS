@@ -53,6 +53,7 @@ Route::prefix('admin')->group(function () {
         Route::get('stocks/{stock}/pdf', [AdminStockController::class, 'generateBuyDetailsPdf']);
         Route::get('stocks/{stock}/sale-pdf', [AdminStockController::class, 'generateSaleDetailsPdf']);
         Route::apiResource('customers', AdminCustomerController::class);
+        Route::apiResource('dealers', AdminDealerController::class);
         Route::apiResource('branches', AdminBranchController::class);
         Route::apiResource('branch-prices', AdminBranchPriceController::class);
         Route::apiResource('vehicles', AdminVehicleController::class);
